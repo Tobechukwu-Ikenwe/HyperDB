@@ -1,0 +1,10 @@
+build/
+.venv/
+__pycache__/
+*.pyc
+
+data/
+hyperdb-text2sql/
+
+data/
+hyperdb-text2sql/
