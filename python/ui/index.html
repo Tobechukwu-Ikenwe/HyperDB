@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HyperDB</title>
+<style>
+  :root { color-scheme: dark; font: 15px/1.5 system-ui, sans-serif; background: #10141d; color: #e8edf5; }
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  header { border-bottom: 1px solid #303947; padding: 24px; background: #171e2a; }
+  header > div, main { width: min(900px, calc(100% - 40px)); margin: auto; }
+  h1 { margin: 0; font-size: 1.6rem; letter-spacing: -.03em; }
+  h2 { margin: 0 0 14px; font-size: 1.05rem; }
+  p { color: #aebacc; margin: 5px 0 0; }
+  main { padding: 28px 0; }
+  section { background: #1a2230; border: 1px solid #344153; border-radius: 12px; padding: 22px; margin-bottom: 18px; }
+  label { display: block; color: #b9c6d7; font-size: .9rem; margin-bottom: 7px; }
+  input, textarea, button { font: inherit; }
+  input, textarea { width: 100%; background: #101722; color: #edf3fa; border: 1px solid #48566a; border-radius: 7px; padding: 10px 12px; }
+  textarea { min-height: 205px; resize: vertical; font: 14px/1.55 ui-monospace, SFMono-Regular, Consolas, monospace; }
+  button { background: #73b3ff; color: #081625; border: 0; border-radius: 7px; font-weight: 650; padding: 10px 16px; cursor: pointer; }
+  button:hover { background: #a2ccff; }
+  button.secondary { background: #303d51; color: #e8edf5; font-size: .84rem; padding: 6px 10px; }
+  button.secondary:hover { background: #40536d; }
+  .database { max-width: 440px; }
+  .examples { display: flex; flex-wrap: wrap; gap: 7px; margin: 12px 0 16px; }
+  .actions { display: flex; align-items: center; gap: 14px; }
+  #status { color: #aebacc; font-size: .88rem; }
+  .error { color: #ff9e9e !important; }
+  pre { margin: 0; min-height: 48px; max-height: 480px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; color: #e8edf5; font: 14px/1.55 ui-monospace, SFMono-Regular, Consolas, monospace; }
+  @media (max-width: 600px) { header { padding: 18px 0; } main { padding-top: 18px; } section { padding: 17px; } .actions { align-items: start; flex-direction: column; } }
+</style>
+<header><div><h1>HyperDB</h1><p>Choose a database, run SQL, and read the result.</p></div></header>
+<main>
+  <section>
+    <div class="database">
+      <label for="database">Database</label>
+      <input id="database" list="databases" value="playground" placeholder="Enter a database name" autocomplete="off">
+      <datalist id="databases"></datalist>
+    </div>
+  </section>
+  <section>
+    <h2>SQL</h2>
+    <label for="sql">Enter one SQL statement</label>
+    <textarea id="sql" spellcheck="false">CREATE TABLE people (id INTEGER NOT NULL, name TEXT)</textarea>
+    <div class="examples" id="examples"></div>
+    <div class="actions"><button id="run">Run SQL</button><span id="status" role="status"></span></div>
+  </section>
+  <section>
+    <h2>Result</h2>
+    <pre id="result" aria-live="polite">Your query result will appear here.</pre>
+  </section>
+</main>
+<script>
+  const $ = id => document.getElementById(id);
+  const examples = [
+    ['Create table', 'CREATE TABLE people (id INTEGER NOT NULL, name TEXT)'],
+    ['Insert row', "INSERT INTO people VALUES (1, 'Ada')"],
+    ['Select rows', 'SELECT id, name FROM people ORDER BY id LIMIT 100'],
+    ['Update row', "UPDATE people SET name = 'Ada Lovelace' WHERE id = 1"],
+    ['Delete row', 'DELETE FROM people WHERE id = 1']
+  ];
+  for (const [label, sql] of examples) {
+    const button = document.createElement('button');
+    button.className = 'secondary'; button.textContent = label;
+    button.onclick = () => { $('sql').value = sql; $('sql').focus(); };
+    $('examples').append(button);
+  }
+  async function api(path, data) {
+    const response = await fetch(path, {method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data)});
+    const value = await response.json();
+    if (!response.ok) throw new Error(value.error || 'Request failed');
+    return value;
+  }
+  function displayResult(result) {
+    if (result.kind === 'write') {
+      if (result.rows_affected === 0) return 'Statement completed. No rows changed.';
+      const noun = result.rows_affected === 1 ? 'row' : 'rows';
+      return `Statement completed. ${result.rows_affected} ${noun} affected.`;
+    }
+    if (result.rows.length === 0) {
+      return result.columns.length
+        ? `${result.columns.join(' | ')}\nNo rows returned.`
+        : 'Query completed. No rows returned.';
+    }
+    const cells = value => value === null ? 'NULL' : String(value)
+      .replaceAll('\\', '\\\\').replaceAll('|', '\\|')
+      .replaceAll('\r', '\\r').replaceAll('\n', '\\n').replaceAll('\t', '\\t');
+    const lines = [result.columns.join(' | '), result.columns.map(() => '---').join(' | ')];
+    for (const row of result.rows) lines.push(row.map(cells).join(' | '));
+    const count = result.rows.length;
+    lines.push('', `${count} ${count === 1 ? 'row' : 'rows'} returned.`);
+    return lines.join('\n');
+  }
+  async function refreshDatabases() {
+    const response = await fetch('/api/databases');
+    const {databases} = await response.json();
+    $('databases').replaceChildren(...databases.map(name => {
+      const option = document.createElement('option'); option.value = name; return option;
+    }));
+  }
+  $('run').onclick = async () => {
+    $('status').textContent = 'Running…';
+    $('status').className = '';
+    try {
+      const {result} = await api('/api/query', {database: $('database').value, sql: $('sql').value});
+      $('result').textContent = displayResult(result);
+      $('status').textContent = 'Done';
+      refreshDatabases();
+    } catch (error) {
+      $('result').textContent = error.message;
+      $('status').textContent = 'Could not run SQL';
+      $('status').className = 'error';
+    }
+  };
+  refreshDatabases();
+</script>
+</html>

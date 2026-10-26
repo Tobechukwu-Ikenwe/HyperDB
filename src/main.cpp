@@ -5,6 +5,8 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <cmath>
+#include <limits>
 #include <stdexcept>
 #include <system_error>
 #ifdef __unix__
@@ -68,6 +70,56 @@ void print_result(const QueryResult& result) {
         std::cout << '\n';
     }
 }
+void print_json_string(const std::string& value) {
+    static constexpr char hex[] = "0123456789abcdef";
+    std::cout << '"';
+    for (unsigned char c : value) {
+        if (c == '"' || c == '\\') std::cout << '\\' << c;
+        else if (c < 0x20) std::cout << "\\u00" << hex[c >> 4] << hex[c & 15];
+        else std::cout << c;
+    }
+    std::cout << '"';
+}
+void print_json_value(const Value& value) {
+    std::visit([](const auto& item) {
+        using T = std::decay_t<decltype(item)>;
+        if constexpr (std::is_same_v<T, std::monostate>) std::cout << "null";
+        else if constexpr (std::is_same_v<T, std::string>) print_json_string(item);
+        else if constexpr (std::is_same_v<T, std::vector<std::uint8_t>>) {
+            static constexpr char hex[] = "0123456789abcdef";
+            std::string bytes = "0x";
+            for (auto byte : item) { bytes += hex[byte >> 4]; bytes += hex[byte & 15]; }
+            print_json_string(bytes);
+        } else if constexpr (std::is_same_v<T, double>) {
+            if (!std::isfinite(item)) throw std::runtime_error("Non-finite result number");
+            std::cout.precision(std::numeric_limits<double>::max_digits10);
+            std::cout << item;
+        } else std::cout << item;
+    }, value);
+}
+void print_json_result(const StatementResult& result) {
+    if (result.is_write) {
+        std::cout << "{\"kind\":\"write\",\"rows_affected\":" << result.rows_affected
+                  << ",\"modified\":" << (result.modified ? "true" : "false") << "}\n";
+        return;
+    }
+    std::cout << "{\"kind\":\"query\",\"columns\":[";
+    for (std::size_t i = 0; i < result.query.columns.size(); ++i) {
+        if (i) std::cout << ',';
+        print_json_string(result.query.columns[i]);
+    }
+    std::cout << "],\"rows\":[";
+    for (std::size_t i = 0; i < result.query.rows.size(); ++i) {
+        if (i) std::cout << ',';
+        std::cout << '[';
+        for (std::size_t j = 0; j < result.query.rows[i].size(); ++j) {
+            if (j) std::cout << ',';
+            print_json_value(result.query.rows[i][j]);
+        }
+        std::cout << ']';
+    }
+    std::cout << "]}\n";
+}
 }
 
 int main(int argc, char** argv) {
@@ -105,15 +157,22 @@ int main(int argc, char** argv) {
         }
         return 0;
     }
-    if (argc >= 2 && std::string{argv[1]} == "--db") {
+    if (argc >= 2 && (std::string{argv[1]} == "--db" ||
+                      std::string{argv[1]} == "--db-json")) {
+        const bool json = std::string{argv[1]} == "--db-json";
         if (argc != 4) {
-            std::cerr << "Usage: hyperdb --db SNAPSHOT 'SQL statement'\n";
+            std::cerr << "Usage: hyperdb --db|--db-json SNAPSHOT 'SQL statement'\n";
             return 2;
         }
         try {
             SnapshotLock lock(argv[2]);
             auto database = Database::load(argv[2]);
             const auto result = execute_statement(database, argv[3]);
+            if (json) {
+                if (result.is_write && result.modified) database.save(argv[2]);
+                print_json_result(result);
+                return 0;
+            }
             if (result.is_write) {
                 if (result.modified) database.save(argv[2]);
                 std::cout << "OK (" << result.rows_affected <<

@@ -7,4 +7,4 @@
 // produces grouped, ordered, and limited results without changing source rows.
 QueryResult aggregate_rows(const SelectStatement& statement,
                            const Schema& schema,
-                           const std::vector<Row>& filtered);
+                           const std::vector<const Row*>& filtered);

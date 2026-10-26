@@ -78,3 +78,20 @@ bool order_rows(
 
     return true;
 }
+
+bool order_rows(std::vector<const Row*>& rows, const Schema& schema,
+                const std::string& column_name, bool ascending) {
+    const auto index = schema.get_column_index(column_name);
+    if (!index) return false;
+    for (const auto* row : rows) {
+        if (*index >= row->size()) throw std::runtime_error("Stored row width does not match schema");
+        if (std::holds_alternative<double>((*row)[*index]) &&
+            !std::isfinite(std::get<double>((*row)[*index])))
+            throw std::runtime_error("Cannot order non-finite numeric value");
+    }
+    std::stable_sort(rows.begin(), rows.end(), [index, ascending](const Row* a, const Row* b) {
+        return ascending ? less_value((*a)[*index], (*b)[*index])
+                         : less_value((*b)[*index], (*a)[*index]);
+    });
+    return true;
+}

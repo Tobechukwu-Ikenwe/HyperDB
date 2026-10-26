@@ -27,6 +27,10 @@ The executable creates a three-row `Department` table for demonstration. Pass on
 
 The C++ API exposes `execute_statement`, `Database::save(path)`, and `Database::load(path)` for other tables. Snapshots include schemas, rows, equality-index definitions, and attached embeddings. UPDATE and DELETE rebuild equality indexes and remap surviving embeddings; each CLI write rewrites the full snapshot. The current format caps a file at 1 GiB, each table at 1 million rows and 512 columns, each text/blob field at 16 MiB, and vector dimensions at 100,000.
 
+## Local SQL workbench
+
+Run `cmake --build build -j 4`, then `python3 python/local_ui.py` and open `http://127.0.0.1:8765`. Enter a database name, enter one SQL statement, and run it. New databases are created on first use; HyperDB saves and reloads their state behind the interface. Results and errors appear as readable text. The UI runs locally without extra Python packages. The CLI's `--db-json` mode supplies typed results to the UI. Run `./build/hyperdb_workloads` in a terminal for the developer benchmark suite. Use `python3 tests/ui_smoke.py` while the server is running to check the UI API.
+
 Snapshot CLI modes (`--init`, `--save-demo`, `--db`, and `--index`) require POSIX file locking and leave a `.lock` sidecar file. The CLI holds the lock across load, execution, and save, so concurrent CLI writers serialize. The C++ library itself has no cross-process lock. Saving writes and syncs a temporary sibling on POSIX systems, renames it into place, then syncs the directory. There is no write-ahead log or multi-statement transaction; power-loss recovery has not been fault-injection tested, and guarantees depend on the filesystem and hardware.
 
 Supported grammar: `SELECT *` or column and aggregate projections, `FROM` one table with an optional two-table `INNER JOIN ... ON a = b`, optional `WHERE` comparisons joined by `AND`, `OR`, `NOT` and parentheses, optional one-column `GROUP BY` and aggregate `HAVING`, optional one-column `ORDER BY` with `ASC` or `DESC`, and optional nonnegative integer `LIMIT`. Aggregates are `COUNT`, `SUM`, `AVG`, `MIN`, and `MAX`; `COUNT(*)` is supported. Comparisons support `=`, `==`, `!=`, `<>`, `<`, `<=`, `>`, `>=`; `IS NULL` and `IS NOT NULL` test for missing values. Table and column lookup is ASCII case-insensitive. `NULL` comparisons yield unknown and do not select rows. Quoted identifiers and strings use the existing lexer. This is not full SQL or SQLite compatibility. The write grammar supports `CREATE TABLE name (column type [NOT NULL], ...)`, one-row `INSERT INTO name [(columns)] VALUES (literals)`, `UPDATE name SET column = literal [, ...] [WHERE predicate]`, and `DELETE FROM name [WHERE predicate]`. Omitted INSERT columns take their schema defaults (NULL unless set through C++). Types are metadata; no coercion or primary-key uniqueness is enforced. Table aliases, outer joins, multiple group keys, arithmetic, SQL index DDL, and multi-statement transactions are not implemented. The C++ engine executes on in-memory tables; the bridge imports a fresh copy per query and does not use snapshots.
@@ -51,6 +55,8 @@ python3 benchmarks/sqlite_baseline.py 100000 200
 ```
 
 These report elapsed milliseconds for repeated scan and indexed lookups. Python/SQLite uses cached prepared statements while HyperDB parses each query, and setup time is excluded. Treat results as workload-specific measurements, not a general engine ranking.
+
+Run `./build/hyperdb_workloads` for a broader HyperDB suite covering parsing, scans, sorting, grouping, index construction and lookup, joins, vector search, writes, and snapshot I/O. See [benchmark notes](docs/BENCHMARKS.md) for measurements and the executor changes they motivated.
 
 ## Project documents
 

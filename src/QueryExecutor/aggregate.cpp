@@ -109,7 +109,7 @@ bool compare_having(const Value& a, const std::string& op, const Value& b) {
 } // namespace
 
 QueryResult aggregate_rows(const SelectStatement& statement, const Schema& schema,
-                           const std::vector<Row>& filtered) {
+                           const std::vector<const Row*>& filtered) {
     if (statement.all_columns) throw std::runtime_error("SELECT * cannot be used with aggregates");
     bool has_aggregate = false;
     for (const auto& item : statement.items) {
@@ -134,17 +134,19 @@ QueryResult aggregate_rows(const SelectStatement& statement, const Schema& schem
     std::vector<Group> groups;
     if (!statement.group_by) groups.push_back({std::monostate{}, {}});
     std::unordered_map<Value, std::size_t, ValueHash, ValueEqual> positions;
-    for (const auto& row : filtered) {
+    const auto group_index = statement.group_by
+        ? schema.get_column_index(*statement.group_by) : std::nullopt;
+    for (const auto* row : filtered) {
         std::size_t position = 0;
-        if (statement.group_by) {
-            const auto& key = row[*schema.get_column_index(*statement.group_by)];
+        if (group_index) {
+            const auto& key = (*row)[*group_index];
             if (std::holds_alternative<double>(key) && !std::isfinite(std::get<double>(key)))
                 throw std::runtime_error("Cannot group non-finite numeric value");
             auto [it, inserted] = positions.try_emplace(key, groups.size());
             if (inserted) groups.push_back({key, {}});
             position = it->second;
         }
-        groups[position].rows.push_back(&row);
+        groups[position].rows.push_back(row);
     }
 
     QueryResult result;

@@ -2,6 +2,7 @@
 
 #include "database/database.h"
 #include "database/TableData/row.h"
+#include "parser/ast.h"
 
 #include <string>
 #include <vector>
@@ -14,6 +15,11 @@ struct QueryResult {
 QueryResult execute_query(
     const Database& database,
     const std::string& sql
+);
+
+QueryResult execute_query(
+    const Database& database,
+    const SelectStatement& statement
 );
 
 struct StatementResult {

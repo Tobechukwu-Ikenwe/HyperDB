@@ -9,7 +9,7 @@
 StatementResult execute_statement(Database& database, const std::string& sql) {
     auto statement = parse_statement(sql);
     if (std::holds_alternative<SelectStatement>(statement))
-        return {execute_query(database, sql), 0, false, false};
+        return {execute_query(database, std::get<SelectStatement>(statement)), 0, false, false};
 
     if (const auto* create = std::get_if<CreateTableStatement>(&statement)) {
         Table table;
@@ -58,9 +58,20 @@ StatementResult execute_statement(Database& database, const std::string& sql) {
         const auto* table = database.find_table(removal->table);
         if (!table) throw std::runtime_error("Unknown table: " + removal->table);
         if (removal->where) validate_predicate(*removal->where, table->schema);
+        std::size_t first_removed = 0;
+        while (first_removed < table->rows.size() && removal->where &&
+               !matches_predicate(*removal->where, table->rows[first_removed], table->schema))
+            ++first_removed;
+        if (first_removed == table->rows.size()) return {{}, 0, true, false};
         std::vector<Row> survivors;
         std::vector<RowID> old_ids;
-        for (std::size_t i = 0; i < table->rows.size(); ++i) {
+        survivors.reserve(table->rows.size() - 1);
+        old_ids.reserve(table->rows.size() - 1);
+        for (std::size_t i = 0; i < first_removed; ++i) {
+            survivors.push_back(table->rows[i]);
+            old_ids.push_back(i);
+        }
+        for (std::size_t i = first_removed + 1; i < table->rows.size(); ++i) {
             if (!removal->where || matches_predicate(*removal->where, table->rows[i], table->schema))
                 continue;
             survivors.push_back(table->rows[i]);

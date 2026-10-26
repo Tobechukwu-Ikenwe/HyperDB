@@ -31,6 +31,9 @@ target_link_libraries(hyperdb PRIVATE hyperdb_core)
 add_executable(hyperdb_benchmark benchmarks/benchmark.cpp)
 target_link_libraries(hyperdb_benchmark PRIVATE hyperdb_core)
 
+add_executable(hyperdb_workloads benchmarks/workloads.cpp)
+target_link_libraries(hyperdb_workloads PRIVATE hyperdb_core)
+
 add_executable(hyperdb_vector_demo examples/vector_search.cpp)
 target_link_libraries(hyperdb_vector_demo PRIVATE hyperdb_core)
 

@@ -140,6 +140,7 @@ int main() {
     assert(result.columns.size() == 3 && result.rows.empty());
     result = execute_query(database, "SELECT name FROM Department LIMIT 0");
     assert(result.rows.empty());
+    expect_failure(database, "SELECT missing FROM Department LIMIT 0", "Unknown column");
     result = execute_query(database, "SELECT name FROM Department WHERE budget >= 5 OR name = 'Biology' ORDER BY budget ASC");
     assert(result.rows.size() == 3);
     assert(std::get<std::string>(result.rows.front()[0]) == "Biology");

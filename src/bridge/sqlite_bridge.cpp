@@ -139,7 +139,7 @@ int main(int argc, char** argv) {
         }
         if (mode != "--execute") throw std::runtime_error("Unknown bridge mode");
         const auto database = load_database(statement);
-        const auto result = execute_query(database, argv[2]);
+        const auto result = execute_query(database, statement);
         std::cout << "{\"columns\":[";
         for (std::size_t i = 0; i < result.columns.size(); ++i) {
             if (i) std::cout << ',';
