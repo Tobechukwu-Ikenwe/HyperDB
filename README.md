@@ -1,5 +1,7 @@
 # HyperDB
 
+> **Engineering status:** The existing engine runs an in-memory SQL subset and saves whole-file snapshots. A disk-page engine is being built incrementally. See [current status](STATUS.md), [repository audit](docs/audit.md), and [limitations](docs/limitations.md) before relying on durability or concurrency behavior.
+
 HyperDB is an educational C++ database engine with in-memory query execution, versioned file snapshots, and an experimental text-to-SQL Python demo. The C++ engine parses and executes a documented SQL subset, including `SELECT` and single-table writes. The storage API provides snapshots. It also has a B-tree equality index, exact cosine vector search over caller-supplied embeddings, and a local Python bridge that imports small read-only SQLite tables for C++ execution. The model demo can choose SQLite or HyperDB for generated SQL.
 
 ## Build and run the C++ engine

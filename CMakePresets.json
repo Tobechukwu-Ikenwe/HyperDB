@@ -1,0 +1,30 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {"name": "debug", "generator": "Ninja", "binaryDir": "${sourceDir}/build/debug", "cacheVariables": {"CMAKE_BUILD_TYPE": "Debug"}},
+    {"name": "release", "generator": "Ninja", "binaryDir": "${sourceDir}/build/release", "cacheVariables": {"CMAKE_BUILD_TYPE": "Release"}},
+    {"name": "asan", "inherits": "debug", "binaryDir": "${sourceDir}/build/asan", "cacheVariables": {"HYPERDB_SANITIZER": "address"}},
+    {"name": "ubsan", "inherits": "debug", "binaryDir": "${sourceDir}/build/ubsan", "cacheVariables": {"HYPERDB_SANITIZER": "undefined"}},
+    {"name": "tsan", "inherits": "debug", "binaryDir": "${sourceDir}/build/tsan", "cacheVariables": {"HYPERDB_SANITIZER": "thread"}},
+    {"name": "coverage", "inherits": "debug", "binaryDir": "${sourceDir}/build/coverage", "cacheVariables": {"HYPERDB_COVERAGE": "ON"}},
+    {"name": "fuzz", "inherits": "asan", "binaryDir": "${sourceDir}/build/fuzz", "cacheVariables": {"CMAKE_CXX_COMPILER": "clang++", "HYPERDB_FUZZ": "ON"}}
+  ],
+  "buildPresets": [
+    {"name": "debug", "configurePreset": "debug"},
+    {"name": "release", "configurePreset": "release"},
+    {"name": "asan", "configurePreset": "asan"},
+    {"name": "ubsan", "configurePreset": "ubsan"},
+    {"name": "tsan", "configurePreset": "tsan"},
+    {"name": "coverage", "configurePreset": "coverage"},
+    {"name": "fuzz", "configurePreset": "fuzz"}
+  ],
+  "testPresets": [
+    {"name": "debug", "configurePreset": "debug", "output": {"outputOnFailure": true}},
+    {"name": "release", "configurePreset": "release", "output": {"outputOnFailure": true}},
+    {"name": "asan", "configurePreset": "asan", "output": {"outputOnFailure": true}},
+    {"name": "ubsan", "configurePreset": "ubsan", "output": {"outputOnFailure": true}},
+    {"name": "tsan", "configurePreset": "tsan", "output": {"outputOnFailure": true}},
+    {"name": "coverage", "configurePreset": "coverage", "output": {"outputOnFailure": true}},
+    {"name": "fuzz", "configurePreset": "fuzz", "output": {"outputOnFailure": true}}
+  ]
+}

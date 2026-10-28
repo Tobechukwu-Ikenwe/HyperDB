@@ -6,6 +6,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(hyperdb_core
+    src/common/logging.cpp
+    src/storage/posix_file.cpp
+    src/storage/fault_file.cpp
     src/parser/lexer.cpp
     src/parser/parser.cpp
     src/database/database.cpp
@@ -23,7 +26,31 @@ add_library(hyperdb_core
     src/filter_table.cpp
     src/select.cpp
 )
-target_include_directories(hyperdb_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_include_directories(hyperdb_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set_source_files_properties(
+    src/common/logging.cpp
+    src/storage/posix_file.cpp
+    src/storage/fault_file.cpp
+    PROPERTIES COMPILE_OPTIONS "-Wall;-Wextra;-Wpedantic;-Werror"
+)
+
+set(HYPERDB_SANITIZER "" CACHE STRING "Sanitizer: address, undefined, or thread")
+option(HYPERDB_COVERAGE "Enable GCC/Clang coverage instrumentation" OFF)
+option(HYPERDB_FUZZ "Enable fuzz development build" OFF)
+if(HYPERDB_SANITIZER)
+    if(NOT HYPERDB_SANITIZER MATCHES "^(address|undefined|thread)$")
+        message(FATAL_ERROR "Unknown sanitizer: ${HYPERDB_SANITIZER}")
+    endif()
+    add_compile_options(-fsanitize=${HYPERDB_SANITIZER} -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=${HYPERDB_SANITIZER})
+endif()
+if(HYPERDB_COVERAGE)
+    add_compile_options(--coverage)
+    add_link_options(--coverage)
+endif()
+if(HYPERDB_FUZZ AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    message(FATAL_ERROR "Fuzz build requires Clang and compiler-provided libFuzzer")
+endif()
 
 add_executable(hyperdb src/main.cpp)
 target_link_libraries(hyperdb PRIVATE hyperdb_core)
@@ -40,7 +67,21 @@ target_link_libraries(hyperdb_vector_demo PRIVATE hyperdb_core)
 add_executable(hyperdb_bridge src/bridge/sqlite_bridge.cpp)
 target_link_libraries(hyperdb_bridge PRIVATE hyperdb_core)
 
+if(HYPERDB_FUZZ)
+    target_compile_options(hyperdb_core PRIVATE -fsanitize=fuzzer-no-link)
+    add_executable(hyperdb_parser_fuzz fuzz/parser_fuzz.cpp)
+    target_link_libraries(hyperdb_parser_fuzz PRIVATE hyperdb_core)
+    target_compile_options(hyperdb_parser_fuzz PRIVATE -fsanitize=fuzzer-no-link)
+    target_link_options(hyperdb_parser_fuzz PRIVATE -fsanitize=fuzzer)
+endif()
+
 enable_testing()
+add_executable(hyperdb_status_tests tests/status_tests.cpp)
+target_link_libraries(hyperdb_status_tests PRIVATE hyperdb_core)
+add_test(NAME hyperdb_status_tests COMMAND hyperdb_status_tests)
+add_executable(hyperdb_file_system_tests tests/file_system_tests.cpp)
+target_link_libraries(hyperdb_file_system_tests PRIVATE hyperdb_core)
+add_test(NAME hyperdb_file_system_tests COMMAND hyperdb_file_system_tests)
 add_executable(hyperdb_tests tests/database_tests.cpp)
 target_link_libraries(hyperdb_tests PRIVATE hyperdb_core)
 add_test(NAME hyperdb_tests COMMAND hyperdb_tests)

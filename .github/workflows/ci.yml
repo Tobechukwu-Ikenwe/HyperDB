@@ -1,0 +1,53 @@
+name: CI
+on:
+  push:
+  pull_request:
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            compiler: gcc
+          - os: ubuntu-latest
+            compiler: clang
+          - os: macos-latest
+            compiler: clang
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Ninja on Linux
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+      - name: Configure
+        env:
+          CXX: ${{ matrix.compiler == 'clang' && 'clang++' || 'g++' }}
+        run: cmake --preset debug
+      - name: Build
+        run: cmake --build --preset debug --parallel 4
+      - name: Test
+        run: ctest --preset debug --output-on-failure
+  sanitizer:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: [asan, ubsan, tsan]
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y ninja-build
+      - run: cmake --preset ${{ matrix.preset }}
+      - run: cmake --build --preset ${{ matrix.preset }} --parallel 4
+      - run: ctest --preset ${{ matrix.preset }} --output-on-failure
+  style:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y clang-format clang-tidy ninja-build
+      - name: Check new module formatting
+        run: clang-format --dry-run --Werror include/hyperdb/*.h src/common/*.cpp src/storage/*.cpp tests/status_tests.cpp tests/file_system_tests.cpp
+      - name: Configure lint compilation database
+        run: cmake --preset debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+      - name: Check new module diagnostics
+        run: clang-tidy -p build/debug src/common/logging.cpp src/storage/posix_file.cpp src/storage/fault_file.cpp --quiet
