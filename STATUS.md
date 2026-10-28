@@ -1,6 +1,6 @@
 # HyperDB status
 
-Updated: 2026-10-28. Baseline commit: `367d3e8`. Session changes are in the working tree.
+Updated: 2026-10-28. Baseline commit: `367d3e8`. Foundation and first M1 step: `19c998a`.
 
 ## Milestones
 
