@@ -40,13 +40,30 @@ jobs:
       - run: cmake --preset ${{ matrix.preset }}
       - run: cmake --build --preset ${{ matrix.preset }} --parallel 4
       - run: ctest --preset ${{ matrix.preset }} --output-on-failure
+  frameworks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y ninja-build
+      - run: cmake --preset framework
+      - run: cmake --build --preset framework --parallel 4
+      - run: ctest --preset framework --output-on-failure
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y ninja-build
+      - run: cmake --preset coverage
+      - run: cmake --build --preset coverage --parallel 4
+      - run: ctest --preset coverage --output-on-failure
+      - run: python3 tools/coverage_report.py --min-line 0.85
   style:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - run: sudo apt-get update && sudo apt-get install -y clang-format clang-tidy ninja-build
       - name: Check new module formatting
-        run: clang-format --dry-run --Werror include/hyperdb/*.h src/common/*.cpp src/storage/*.cpp tests/status_tests.cpp tests/file_system_tests.cpp
+        run: clang-format --dry-run --Werror include/hyperdb/*.h src/common/*.cpp src/storage/*.cpp tests/status_tests.cpp tests/file_system_tests.cpp tests/unit/*.cpp benchmarks/file_io_benchmark.cpp
       - name: Configure lint compilation database
         run: cmake --preset debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
       - name: Check new module diagnostics

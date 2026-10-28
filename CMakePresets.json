@@ -7,7 +7,8 @@
     {"name": "ubsan", "inherits": "debug", "binaryDir": "${sourceDir}/build/ubsan", "cacheVariables": {"HYPERDB_SANITIZER": "undefined"}},
     {"name": "tsan", "inherits": "debug", "binaryDir": "${sourceDir}/build/tsan", "cacheVariables": {"HYPERDB_SANITIZER": "thread"}},
     {"name": "coverage", "inherits": "debug", "binaryDir": "${sourceDir}/build/coverage", "cacheVariables": {"HYPERDB_COVERAGE": "ON"}},
-    {"name": "fuzz", "inherits": "asan", "binaryDir": "${sourceDir}/build/fuzz", "cacheVariables": {"CMAKE_CXX_COMPILER": "clang++", "HYPERDB_FUZZ": "ON"}}
+    {"name": "fuzz", "inherits": "asan", "binaryDir": "${sourceDir}/build/fuzz", "cacheVariables": {"CMAKE_CXX_COMPILER": "clang++", "HYPERDB_FUZZ": "ON"}},
+    {"name": "framework", "inherits": "debug", "binaryDir": "${sourceDir}/build/framework", "cacheVariables": {"HYPERDB_FRAMEWORKS": "ON"}}
   ],
   "buildPresets": [
     {"name": "debug", "configurePreset": "debug"},
@@ -16,7 +17,8 @@
     {"name": "ubsan", "configurePreset": "ubsan"},
     {"name": "tsan", "configurePreset": "tsan"},
     {"name": "coverage", "configurePreset": "coverage"},
-    {"name": "fuzz", "configurePreset": "fuzz"}
+    {"name": "fuzz", "configurePreset": "fuzz"},
+    {"name": "framework", "configurePreset": "framework"}
   ],
   "testPresets": [
     {"name": "debug", "configurePreset": "debug", "output": {"outputOnFailure": true}},
@@ -25,6 +27,7 @@
     {"name": "ubsan", "configurePreset": "ubsan", "output": {"outputOnFailure": true}},
     {"name": "tsan", "configurePreset": "tsan", "output": {"outputOnFailure": true}},
     {"name": "coverage", "configurePreset": "coverage", "output": {"outputOnFailure": true}},
-    {"name": "fuzz", "configurePreset": "fuzz", "output": {"outputOnFailure": true}}
+    {"name": "fuzz", "configurePreset": "fuzz", "output": {"outputOnFailure": true}},
+    {"name": "framework", "configurePreset": "framework", "output": {"outputOnFailure": true}}
   ]
 }

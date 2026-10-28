@@ -6,7 +6,7 @@ HyperDB is an educational C++ database engine with in-memory query execution, ve
 
 ## Build and run the C++ engine
 
-Requires a C++20 compiler and CMake 3.16 or newer.
+Requires a C++20 compiler and CMake 3.25 or newer.
 
 ```sh
 cmake -S . -B build

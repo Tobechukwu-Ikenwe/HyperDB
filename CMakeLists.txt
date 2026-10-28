@@ -1,9 +1,28 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.25)
 project(HyperDB LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+set(HYPERDB_SANITIZER "" CACHE STRING "Sanitizer: address, undefined, or thread")
+option(HYPERDB_COVERAGE "Enable GCC/Clang coverage instrumentation" OFF)
+option(HYPERDB_FUZZ "Enable fuzz development build" OFF)
+option(HYPERDB_FRAMEWORKS "Build pinned GoogleTest and Google Benchmark targets" OFF)
+if(HYPERDB_SANITIZER)
+    if(NOT HYPERDB_SANITIZER MATCHES "^(address|undefined|thread)$")
+        message(FATAL_ERROR "Unknown sanitizer: ${HYPERDB_SANITIZER}")
+    endif()
+    add_compile_options(-fsanitize=${HYPERDB_SANITIZER} -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=${HYPERDB_SANITIZER})
+endif()
+if(HYPERDB_COVERAGE)
+    add_compile_options(--coverage)
+    add_link_options(--coverage)
+endif()
+if(HYPERDB_FUZZ AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    message(FATAL_ERROR "Fuzz build requires Clang and compiler-provided libFuzzer")
+endif()
 
 add_library(hyperdb_core
     src/common/logging.cpp
@@ -34,24 +53,6 @@ set_source_files_properties(
     PROPERTIES COMPILE_OPTIONS "-Wall;-Wextra;-Wpedantic;-Werror"
 )
 
-set(HYPERDB_SANITIZER "" CACHE STRING "Sanitizer: address, undefined, or thread")
-option(HYPERDB_COVERAGE "Enable GCC/Clang coverage instrumentation" OFF)
-option(HYPERDB_FUZZ "Enable fuzz development build" OFF)
-if(HYPERDB_SANITIZER)
-    if(NOT HYPERDB_SANITIZER MATCHES "^(address|undefined|thread)$")
-        message(FATAL_ERROR "Unknown sanitizer: ${HYPERDB_SANITIZER}")
-    endif()
-    add_compile_options(-fsanitize=${HYPERDB_SANITIZER} -fno-omit-frame-pointer)
-    add_link_options(-fsanitize=${HYPERDB_SANITIZER})
-endif()
-if(HYPERDB_COVERAGE)
-    add_compile_options(--coverage)
-    add_link_options(--coverage)
-endif()
-if(HYPERDB_FUZZ AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    message(FATAL_ERROR "Fuzz build requires Clang and compiler-provided libFuzzer")
-endif()
-
 add_executable(hyperdb src/main.cpp)
 target_link_libraries(hyperdb PRIVATE hyperdb_core)
 
@@ -76,6 +77,28 @@ if(HYPERDB_FUZZ)
 endif()
 
 enable_testing()
+if(HYPERDB_FRAMEWORKS)
+    include(FetchContent)
+    set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
+    FetchContent_Declare(googletest
+        GIT_REPOSITORY https://github.com/google/googletest.git
+        GIT_TAG v1.17.0
+        GIT_SHALLOW TRUE)
+    set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
+    set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "" FORCE)
+    FetchContent_Declare(googlebenchmark
+        GIT_REPOSITORY https://github.com/google/benchmark.git
+        GIT_TAG v1.9.4
+        GIT_SHALLOW TRUE)
+    FetchContent_MakeAvailable(googletest googlebenchmark)
+
+    add_executable(hyperdb_gtest tests/unit/status_gtest.cpp)
+    target_link_libraries(hyperdb_gtest PRIVATE hyperdb_core GTest::gtest_main)
+    add_test(NAME hyperdb_gtest COMMAND hyperdb_gtest)
+
+    add_executable(hyperdb_file_io_benchmark benchmarks/file_io_benchmark.cpp)
+    target_link_libraries(hyperdb_file_io_benchmark PRIVATE hyperdb_core benchmark::benchmark_main)
+endif()
 add_executable(hyperdb_status_tests tests/status_tests.cpp)
 target_link_libraries(hyperdb_status_tests PRIVATE hyperdb_core)
 add_test(NAME hyperdb_status_tests COMMAND hyperdb_status_tests)
