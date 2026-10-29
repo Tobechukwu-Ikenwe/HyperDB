@@ -25,9 +25,12 @@ if(HYPERDB_FUZZ AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 add_library(hyperdb_core
+    src/common/crc32c.cpp
     src/common/logging.cpp
     src/storage/posix_file.cpp
     src/storage/fault_file.cpp
+    src/storage/page_format.cpp
+    src/storage/disk_manager.cpp
     src/parser/lexer.cpp
     src/parser/parser.cpp
     src/database/database.cpp
@@ -48,8 +51,11 @@ add_library(hyperdb_core
 target_include_directories(hyperdb_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set_source_files_properties(
     src/common/logging.cpp
+    src/common/crc32c.cpp
     src/storage/posix_file.cpp
     src/storage/fault_file.cpp
+    src/storage/page_format.cpp
+    src/storage/disk_manager.cpp
     PROPERTIES COMPILE_OPTIONS "-Wall;-Wextra;-Wpedantic;-Werror"
 )
 
@@ -74,6 +80,8 @@ if(HYPERDB_FUZZ)
     target_link_libraries(hyperdb_parser_fuzz PRIVATE hyperdb_core)
     target_compile_options(hyperdb_parser_fuzz PRIVATE -fsanitize=fuzzer-no-link)
     target_link_options(hyperdb_parser_fuzz PRIVATE -fsanitize=fuzzer)
+    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/fuzz/corpus/parser
+         DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/corpus)
 endif()
 
 enable_testing()
@@ -105,6 +113,12 @@ add_test(NAME hyperdb_status_tests COMMAND hyperdb_status_tests)
 add_executable(hyperdb_file_system_tests tests/file_system_tests.cpp)
 target_link_libraries(hyperdb_file_system_tests PRIVATE hyperdb_core)
 add_test(NAME hyperdb_file_system_tests COMMAND hyperdb_file_system_tests)
+add_executable(hyperdb_page_format_tests tests/page_format_tests.cpp)
+target_link_libraries(hyperdb_page_format_tests PRIVATE hyperdb_core)
+add_test(NAME hyperdb_page_format_tests COMMAND hyperdb_page_format_tests)
+add_executable(hyperdb_disk_manager_tests tests/disk_manager_tests.cpp)
+target_link_libraries(hyperdb_disk_manager_tests PRIVATE hyperdb_core)
+add_test(NAME hyperdb_disk_manager_tests COMMAND hyperdb_disk_manager_tests)
 add_executable(hyperdb_tests tests/database_tests.cpp)
 target_link_libraries(hyperdb_tests PRIVATE hyperdb_core)
 add_test(NAME hyperdb_tests COMMAND hyperdb_tests)
