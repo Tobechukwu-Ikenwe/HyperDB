@@ -12,7 +12,7 @@
 | `src/database/TableData/*`, `src/database/database.*` | In-memory tables, schema, index ownership | `src/common/`, `src/catalog/`, `src/api/` |
 | `src/database/persistence.cpp` | Versioned whole-file snapshot; temporary-file sync and rename | Compatibility path; new `src/storage/` page store |
 | `src/database/Indexes/btree.*` | In-memory equality index | New `src/index/` persistent concurrent B+ tree |
-| `src/QueryExecutor/*`, `src/filter*`, `src/select.cpp`, `src/from/*`, `src/OrderBy/*`, `src/Limit/*` | SQL subset execution | `src/execution/`, `src/planner/` |
+| `src/QueryExecutor/*`, `src/filter*`, `src/OrderBy/*`, `src/Limit/*` | SQL subset execution and tested legacy helpers | `src/execution/`, `src/planner/` |
 | `src/main.cpp` | Single-statement CLI and snapshot modes | `src/shell/` |
 | `src/bridge/*`, `python/*`, `hyperdb-text2sql/` | SQLite import and optional text-to-SQL experiment | Keep separate from engine core |
 | `tests/*` | Seven C++ and three Python tests | Preserve, then reorganize by unit/integration/recovery/etc. |

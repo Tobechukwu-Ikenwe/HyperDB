@@ -39,7 +39,6 @@ add_library(hyperdb_core
     src/database/TableData/schema.cpp
     src/database/Indexes/btree.cpp
     src/database/Indexes/vector_index.cpp
-    src/from/from.cpp
     src/Limit/limit.cpp
     src/OrderBy/order_by.cpp
     src/QueryExecutor/query_executor.cpp
@@ -47,7 +46,6 @@ add_library(hyperdb_core
     src/QueryExecutor/aggregate.cpp
     src/filter.cpp
     src/filter_table.cpp
-    src/select.cpp
 )
 target_include_directories(hyperdb_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_compile_options(hyperdb_core PRIVATE -Wall -Wextra -Wpedantic -Werror)
