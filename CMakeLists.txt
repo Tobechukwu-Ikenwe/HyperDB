@@ -31,6 +31,7 @@ add_library(hyperdb_core
     src/storage/fault_file.cpp
     src/storage/page_format.cpp
     src/storage/disk_manager.cpp
+    src/storage/buffer_pool.cpp
     src/parser/lexer.cpp
     src/parser/parser.cpp
     src/database/database.cpp
@@ -115,6 +116,9 @@ add_test(NAME hyperdb_page_format_tests COMMAND hyperdb_page_format_tests)
 add_executable(hyperdb_disk_manager_tests tests/disk_manager_tests.cpp)
 target_link_libraries(hyperdb_disk_manager_tests PRIVATE hyperdb_core)
 add_test(NAME hyperdb_disk_manager_tests COMMAND hyperdb_disk_manager_tests)
+add_executable(hyperdb_buffer_pool_tests tests/buffer_pool_tests.cpp)
+target_link_libraries(hyperdb_buffer_pool_tests PRIVATE hyperdb_core)
+add_test(NAME hyperdb_buffer_pool_tests COMMAND hyperdb_buffer_pool_tests)
 add_executable(hyperdb_tests tests/database_tests.cpp)
 target_link_libraries(hyperdb_tests PRIVATE hyperdb_core)
 add_test(NAME hyperdb_tests COMMAND hyperdb_tests)

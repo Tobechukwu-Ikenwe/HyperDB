@@ -80,8 +80,8 @@ jobs:
       - uses: actions/checkout@v4
       - run: sudo apt-get update && sudo apt-get install -y clang-format clang-tidy ninja-build
       - name: Check new module formatting
-        run: clang-format --dry-run --Werror include/hyperdb/*.h src/common/*.h src/common/*.cpp src/storage/*.h src/storage/*.cpp tests/status_tests.cpp tests/file_system_tests.cpp tests/page_format_tests.cpp tests/disk_manager_tests.cpp tests/unit/*.cpp benchmarks/file_io_benchmark.cpp
+        run: clang-format --dry-run --Werror include/hyperdb/*.h src/common/*.h src/common/*.cpp src/storage/*.h src/storage/*.cpp tests/status_tests.cpp tests/file_system_tests.cpp tests/page_format_tests.cpp tests/disk_manager_tests.cpp tests/buffer_pool_tests.cpp tests/unit/*.cpp benchmarks/file_io_benchmark.cpp
       - name: Configure lint compilation database
         run: cmake --preset debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
       - name: Check new module diagnostics
-        run: clang-tidy -p build/debug src/common/logging.cpp src/common/crc32c.cpp src/storage/posix_file.cpp src/storage/fault_file.cpp src/storage/page_format.cpp src/storage/disk_manager.cpp --quiet
+        run: clang-tidy -p build/debug src/common/logging.cpp src/common/crc32c.cpp src/storage/posix_file.cpp src/storage/fault_file.cpp src/storage/page_format.cpp src/storage/disk_manager.cpp src/storage/buffer_pool.cpp --quiet
