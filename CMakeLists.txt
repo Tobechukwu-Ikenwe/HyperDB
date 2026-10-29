@@ -49,15 +49,11 @@ add_library(hyperdb_core
     src/select.cpp
 )
 target_include_directories(hyperdb_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include)
-set_source_files_properties(
-    src/common/logging.cpp
-    src/common/crc32c.cpp
-    src/storage/posix_file.cpp
-    src/storage/fault_file.cpp
-    src/storage/page_format.cpp
-    src/storage/disk_manager.cpp
-    PROPERTIES COMPILE_OPTIONS "-Wall;-Wextra;-Wpedantic;-Werror"
-)
+target_compile_options(hyperdb_core PRIVATE -Wall -Wextra -Wpedantic -Werror)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 15)
+    target_compile_options(hyperdb_core PRIVATE
+        $<$<CONFIG:Release>:-Wno-free-nonheap-object>)
+endif()
 
 add_executable(hyperdb src/main.cpp)
 target_link_libraries(hyperdb PRIVATE hyperdb_core)
