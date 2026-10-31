@@ -1,8 +1,10 @@
 # HyperDB status
 
-Updated: 2026-10-29. Baseline commit: `367d3e8`. Foundation and file I/O boundary: `19c998a`.
+Updated: 2026-10-31. Baseline commit: `367d3e8`. Foundation and file I/O boundary: `19c998a`.
 
 Source audit on 2026-10-29 removed five unreferenced files and two CMake source entries (ADR 0009). Debug and Release each passed 15/15 tests after the cleanup. The older `Limit` and `filter_table` helpers remain because tests exercise them; `filter.cpp` also serves vector metadata search.
+
+The optimization history was consolidated in `optimizatoons.md` on 2026-10-31. It distinguishes recorded local timings from unmeasured storage work and notes gaps in the historical benchmark record. No new performance claim or engine behavior change was made in this documentation session.
 
 ## Milestones
 
