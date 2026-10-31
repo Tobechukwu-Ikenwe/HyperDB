@@ -5,7 +5,7 @@ Updated: 2026-10-31. Source of truth for the portability program. Existing M0–
 | Stage | State | Evidence | Remaining acceptance work |
 | --- | --- | --- | --- |
 | 1. Audit | Complete | [Portability audit](PORTABILITY_AUDIT.md) covers repository inventory, subsystem states, allocation and platform risks, exact source locations, and a dependency-order plan. Native Linux Debug baseline passed 15/15 tests; 87 local audit links and line anchors validated. | Revisit findings as implementation reveals new evidence. |
-| 2. Architecture | Not started | Existing ADRs cover file/page/buffer prototypes. | Target contracts, migration map, memory, storage, transaction, platform, RTOS, compatibility, and performance documents. |
+| 2. Architecture | Complete | [Portable architecture](PORTABLE_ARCHITECTURE.md), [platform contract](PLATFORM_ABSTRACTION.md), [memory](MEMORY_ARCHITECTURE.md), [storage](STORAGE_ARCHITECTURE.md), [transaction](TRANSACTION_ARCHITECTURE.md), [RTOS integration](RTOS_INTEGRATION.md), [portability matrix](PORTABILITY_MATRIX.md), [performance gate](PERFORMANCE.md), and [ADR 0010](../decisions/0010-portable-core-contract.md) define the target and migration order. All 11 architecture/ADR files passed local-link validation. | Revisit contracts as tests expose gaps; proposed interfaces are not implemented yet. |
 | 3. Foundation | Not started | Existing C++ API, POSIX file adapter, and status type are partial starting points. | One core/adapters build split, portable storage/memory/sync contracts, stable C API, C/C++ embedding examples and tests. |
 | 4. Storage | Not started | Checksummed fixed page codec and disk manager tested separately from SQL. | Pager lifecycle, page-backed heap/catalog/indexes, migration, adapter-backed persistence. |
 | 5. Reliability | Not started | Legacy snapshot tests and page fault tests only. | Transaction protocol, recovery oracle, power-cut tests, concurrency contract. |
@@ -23,4 +23,4 @@ Updated: 2026-10-31. Source of truth for the portability program. Existing M0–
 
 ## Next dependency-order step
 
-Write Stage 2 interface contracts. The first implementation slice should separate the common database target from POSIX adapters while keeping native Linux SQL and snapshot tests green.
+Start Stage 3 with a tested build split between the common database target and POSIX adapters while keeping native Linux SQL and snapshot tests green. Then introduce the narrow logical storage and memory interfaces and embedding API.
