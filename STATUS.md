@@ -12,6 +12,8 @@ Stage 3 now also has an initial opaque C API in `include/hyperdb/c_api.h`, C and
 
 Stage 4 has begun with `DiskManager::open(std::unique_ptr<File>, create)`, allowing a caller-provided random-access storage object without a path or filesystem. The memory-backed adapter test initializes a page file, allocates and writes a page, destroys the manager, reopens the same backing bytes, and validates the record. Debug and Release each pass 17/17 tests. This tests the page prototype only; SQL persistence still uses whole-file snapshots and raw flash is unsupported.
 
+The `single-threaded` CMake preset now selects a no-op `Mutex` implementation for the core. The Linux Debug profile built and passed 17/17 tests, and `nm -u build/single-threaded/libhyperdb_core.a` reported no mutex lock symbols. Shared handles must remain confined to one thread in this mode. Windows and embedded toolchains are still unverified.
+
 ## Milestones
 
 | Milestone | State | Reproducible evidence |

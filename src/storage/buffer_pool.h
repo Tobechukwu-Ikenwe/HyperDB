@@ -1,11 +1,11 @@
 #pragma once
 
 #include "storage/disk_manager.h"
+#include "hyperdb/synchronization.h"
 
 #include <cstddef>
 #include <cstdint>
 #include <memory>
-#include <mutex>
 #include <vector>
 
 namespace hyperdb {
@@ -45,7 +45,7 @@ class BufferPool {
     WalDurability &wal_;
     std::vector<Frame> frames_;
     std::size_t next_victim_ = 0;
-    std::mutex mutex_;
+    Mutex mutex_;
 };
 
 } // namespace hyperdb

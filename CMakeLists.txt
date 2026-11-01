@@ -9,6 +9,7 @@ set(HYPERDB_SANITIZER "" CACHE STRING "Sanitizer: address, undefined, or thread"
 option(HYPERDB_COVERAGE "Enable GCC/Clang coverage instrumentation" OFF)
 option(HYPERDB_FUZZ "Enable fuzz development build" OFF)
 option(HYPERDB_FRAMEWORKS "Build pinned GoogleTest and Google Benchmark targets" OFF)
+option(HYPERDB_SINGLE_THREADED "Build the core for single-threaded access without mutexes" OFF)
 if(HYPERDB_SANITIZER)
     if(NOT HYPERDB_SANITIZER MATCHES "^(address|undefined|thread)$")
         message(FATAL_ERROR "Unknown sanitizer: ${HYPERDB_SANITIZER}")
@@ -47,6 +48,9 @@ add_library(hyperdb_core
 )
 target_include_directories(hyperdb_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_compile_options(hyperdb_core PRIVATE -Wall -Wextra -Wpedantic -Werror)
+if(HYPERDB_SINGLE_THREADED)
+    target_compile_definitions(hyperdb_core PUBLIC HYPERDB_SINGLE_THREADED=1)
+endif()
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 15)
     target_compile_options(hyperdb_core PRIVATE
         $<$<CONFIG:Release>:-Wno-free-nonheap-object>)

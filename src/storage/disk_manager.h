@@ -1,13 +1,13 @@
 #pragma once
 
 #include "hyperdb/file_system.h"
+#include "hyperdb/synchronization.h"
 #include "storage/page_format.h"
 
 #include <atomic>
 #include <cstdint>
 #include <filesystem>
 #include <memory>
-#include <mutex>
 
 namespace hyperdb {
 
@@ -44,7 +44,7 @@ class DiskManager {
     std::unique_ptr<File> file_;
     Page header_;
     std::atomic<std::uint64_t> page_count_;
-    std::mutex allocation_mutex_;
+    Mutex allocation_mutex_;
     bool allocation_poisoned_ = false;
 };
 

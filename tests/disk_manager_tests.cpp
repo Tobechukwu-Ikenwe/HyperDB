@@ -116,6 +116,7 @@ int main() {
     disk = std::move(reopened).value();
     assert(disk->page_count() == 1);
     assert(disk->allocate_slotted_page().value() == 1);
+#ifndef HYPERDB_SINGLE_THREADED
     std::array<std::vector<std::uint64_t>, 4> ids;
     std::vector<std::thread> workers;
     for (auto &worker_ids : ids) {
@@ -142,6 +143,10 @@ int main() {
     for (std::uint64_t id = 1; id < disk->page_count(); ++id) {
         assert(disk->read_page(id).ok());
     }
+#else
+    assert(disk->page_count() == 2);
+    assert(disk->read_page(1).ok());
+#endif
     disk.reset();
     std::filesystem::remove(fault_path);
     std::filesystem::remove(path);

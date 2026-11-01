@@ -1,6 +1,6 @@
 # RTOS and bare-metal integration
 
-Status: design path only. No FreeRTOS, Zephyr, other RTOS, or bare-metal build or hardware test has passed.
+Status: design path only. No FreeRTOS, Zephyr, other RTOS, or bare-metal build or hardware test has passed. A Linux `single-threaded` preset validates the no-mutex code path, but does not validate an RTOS toolchain or adapter.
 
 An RTOS task calls HyperDB directly. The engine creates no task or background thread. In the default single-threaded profile, one connection is confined to one caller at a time; the application is responsible for scheduling access. A shared connection may use application mutex callbacks only after a lock-order and priority-inversion policy is tested. A mutex callback may block; the API must document whether it can wait and whether the application may cancel the wait. No callback may reenter a handle while its lock is held. A bare-metal build must not pull in pthreads, Win32 threading, or an RTOS header through core code.
 
