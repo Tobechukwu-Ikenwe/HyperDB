@@ -18,8 +18,48 @@ typedef enum hdb_status {
     HDB_INVALID_ARGUMENT = 1,
     HDB_OUT_OF_MEMORY = 2,
     HDB_SQL_ERROR = 3,
-    HDB_INTERNAL_ERROR = 4
+    HDB_INTERNAL_ERROR = 4,
+    HDB_UNSUPPORTED = 5
 } hdb_status;
+
+typedef enum hdb_allocator_kind {
+    HDB_ALLOCATOR_SYSTEM = 0,
+    HDB_ALLOCATOR_APPLICATION = 1,
+    HDB_ALLOCATOR_HYPERMALLOC = 2
+} hdb_allocator_kind;
+
+#ifdef __cplusplus
+typedef void *(*hdb_allocate_callback)(void *context, size_t bytes, size_t alignment) noexcept;
+typedef void (*hdb_deallocate_callback)(void *context, void *pointer, size_t bytes,
+                                        size_t alignment) noexcept;
+#else
+typedef void *(*hdb_allocate_callback)(void *context, size_t bytes, size_t alignment);
+typedef void (*hdb_deallocate_callback)(void *context, void *pointer, size_t bytes,
+                                        size_t alignment);
+#endif
+
+typedef struct hdb_allocator_config {
+    size_t struct_size;
+    hdb_allocator_kind kind;
+    size_t budget_bytes; /* zero means unlimited tracked bytes */
+    void *context;
+    hdb_allocate_callback allocate;
+    hdb_deallocate_callback deallocate;
+} hdb_allocator_config;
+
+#define HDB_ALLOCATOR_CONFIG_INIT                                                                  \
+    {sizeof(hdb_allocator_config), HDB_ALLOCATOR_SYSTEM, 0, NULL, NULL, NULL}
+
+typedef struct hdb_allocator_stats {
+    size_t struct_size;
+    size_t current_bytes;
+    size_t peak_bytes;
+    size_t allocation_count;
+    size_t deallocation_count;
+    size_t failure_count;
+    size_t remaining_budget;
+    int has_remaining_budget;
+} hdb_allocator_stats;
 
 typedef enum hdb_value_type {
     HDB_NULL = 0,
@@ -47,7 +87,15 @@ typedef struct hdb_value {
 
 /* Creates an empty, in-memory database. Each handle is single-threaded. */
 hdb_status hdb_database_create(hdb_database **out_database);
+/* Selects the allocator used by the database's currently routed allocations.
+ * The application callback context must outlive the database handle. */
+hdb_status hdb_database_create_with_allocator(const hdb_allocator_config *config,
+                                              hdb_database **out_database);
 void hdb_database_destroy(hdb_database *database);
+/* Statistics cover allocations routed through HyperDB's configured resource,
+ * not every STL, parser, query-result, or third-party allocation. */
+hdb_status hdb_database_get_allocator_stats(const hdb_database *database,
+                                            hdb_allocator_stats *out_stats);
 
 /* Executes one SQL statement. Destroy *out_result with hdb_result_destroy. */
 hdb_status hdb_execute(hdb_database *database, const char *sql, hdb_result **out_result,

@@ -14,6 +14,7 @@ The workflow definitions in `.github/workflows/` are the validation architecture
 | `benchmarks.yml` | — | Release workloads, same-runner parent-commit comparison, and raw artifact | Reusable/manual | — | Seven paired samples; 35% slowdown threshold for workloads with baseline median at least 0.01 ms; artifacts include raw data and JSON comparison |
 | `nightly.yml` | — | — | Daily stress/repetition, larger equality workload, one-hour parser fuzz, benchmark artifacts | — | Reports unsupported memory-budget, power-loss, flash, and hardware scenarios in the run summary |
 | `release.yml` | — | — | — | Build and full Release suite, package source and Linux x86_64 files, then publish behind the `release` environment | Release assets are uploaded only after verification and environment approval |
+| `hypermalloc.yml` | Build pinned HyperMalloc source and run HyperDB with its optional allocator backend | Same | — | — | Verifies the external allocator's tests plus HyperDB's current allocator/SQL suite on Linux; not yet run remotely |
 
 The current CTest labels are `unit`, `integration`, `storage`, `regression`, and `concurrency`. Storage fault tests remain alongside the storage modules they exercise; `tests/fault_injection/README.md` maps them. `tests/transactions/README.md` states that transaction tests do not exist because transaction/recovery behavior is not implemented.
 
@@ -51,4 +52,4 @@ Commit `765eae9ea5163e65124361282bbf8de089764371` was pushed to `main` and all f
 
 Historical GitHub run [40803141644](https://github.com/Tobechukwu-Ikenwe/HyperDB/actions/runs/40803141644) had a successful Linux GCC/Clang build, release job, sanitizers, coverage, and style job. The macOS test step failed after its build succeeded. GitHub's current job metadata identifies the failed step as `Test` but the log endpoint returned no test output, so the specific failing CTest remains unidentified. This workflow set replaces the macOS job with the explicitly required Windows and AArch64 configurations.
 
-Workflow YAML was syntax-checked locally; the four push workflows and all PR-required contexts above have passed on GitHub. Gated release publication remains unexecuted; nightly scenarios are pending their schedule or manual dispatch.
+Workflow YAML was syntax-checked locally; the four push workflows and all PR-required contexts above have passed on GitHub. The HyperMalloc workflow was added after that run and has only been run locally so far (HyperMalloc 13/13 and HyperDB 19/19). Gated release publication remains unexecuted; nightly scenarios are pending their schedule or manual dispatch.

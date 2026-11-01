@@ -10,6 +10,14 @@ option(HYPERDB_COVERAGE "Enable GCC/Clang coverage instrumentation" OFF)
 option(HYPERDB_FUZZ "Enable fuzz development build" OFF)
 option(HYPERDB_FRAMEWORKS "Build pinned GoogleTest and Google Benchmark targets" OFF)
 option(HYPERDB_SINGLE_THREADED "Build the core for single-threaded access without mutexes" OFF)
+option(HYPERDB_ENABLE_HYPERMALLOC "Enable the optional HyperMalloc memory backend" OFF)
+
+if(HYPERDB_ENABLE_HYPERMALLOC)
+    if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux" OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+        message(FATAL_ERROR "HyperMalloc requires a 64-bit Linux target")
+    endif()
+    find_package(HyperMalloc CONFIG REQUIRED)
+endif()
 
 function(hyperdb_strict_warnings target)
     if(MSVC)
@@ -35,6 +43,7 @@ if(HYPERDB_FUZZ AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 add_library(hyperdb_core
+    src/common/memory_resource.cpp
     src/common/crc32c.cpp
     src/common/logging.cpp
     src/storage/fault_file.cpp
@@ -57,6 +66,10 @@ add_library(hyperdb_core
 )
 target_include_directories(hyperdb_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include)
 hyperdb_strict_warnings(hyperdb_core)
+if(HYPERDB_ENABLE_HYPERMALLOC)
+    target_compile_definitions(hyperdb_core PRIVATE HYPERDB_HAS_HYPERMALLOC=1)
+    target_link_libraries(hyperdb_core PRIVATE HyperMalloc::hypermalloc)
+endif()
 if(HYPERDB_SINGLE_THREADED)
     target_compile_definitions(hyperdb_core PUBLIC HYPERDB_SINGLE_THREADED=1)
 endif()
@@ -134,6 +147,12 @@ endif()
 add_executable(hyperdb_status_tests tests/unit/status_tests.cpp)
 target_link_libraries(hyperdb_status_tests PRIVATE hyperdb_core)
 add_test(NAME hyperdb_status_tests COMMAND hyperdb_status_tests)
+add_executable(hyperdb_memory_resource_tests tests/unit/memory_resource_tests.cpp)
+target_link_libraries(hyperdb_memory_resource_tests PRIVATE hyperdb_core)
+add_test(NAME hyperdb_memory_resource_tests COMMAND hyperdb_memory_resource_tests)
+add_executable(hyperdb_allocator_backend_tests tests/unit/allocator_backend_tests.cpp)
+target_link_libraries(hyperdb_allocator_backend_tests PRIVATE hyperdb_snapshot_compat)
+add_test(NAME hyperdb_allocator_backend_tests COMMAND hyperdb_allocator_backend_tests)
 add_executable(hyperdb_c_api_tests tests/integration/c_api_tests.c)
 target_link_libraries(hyperdb_c_api_tests PRIVATE hyperdb_c_api)
 add_test(NAME hyperdb_c_api_tests COMMAND hyperdb_c_api_tests)
@@ -197,7 +216,9 @@ if(UNIX AND Python3_Interpreter_FOUND)
 endif()
 
 set_tests_properties(
-    hyperdb_status_tests hyperdb_tests hyperdb_lexer_tests hyperdb_parser_tests
+    hyperdb_status_tests hyperdb_memory_resource_tests hyperdb_allocator_backend_tests
+    hyperdb_tests
+    hyperdb_lexer_tests hyperdb_parser_tests
     hyperdb_index_tests hyperdb_vector_tests
     PROPERTIES LABELS "unit")
 set_tests_properties(

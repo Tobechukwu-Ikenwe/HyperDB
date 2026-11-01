@@ -11,6 +11,7 @@
 #include <variant>
 
 struct hdb_database {
+    explicit hdb_database(hyperdb::AllocatorConfig allocator) : database(allocator) {}
     Database database;
 };
 
@@ -34,17 +35,67 @@ hdb_status exception_status(const std::exception &error, char *buffer, size_t ca
 } // namespace
 
 extern "C" hdb_status hdb_database_create(hdb_database **out_database) {
-    if (!out_database)
+    const hdb_allocator_config config = HDB_ALLOCATOR_CONFIG_INIT;
+    return hdb_database_create_with_allocator(&config, out_database);
+}
+
+extern "C" hdb_status hdb_database_create_with_allocator(const hdb_allocator_config *config,
+                                                         hdb_database **out_database) {
+    if (!config || !out_database)
         return HDB_INVALID_ARGUMENT;
     *out_database = nullptr;
+    if (config->struct_size < sizeof(hdb_allocator_config))
+        return HDB_INVALID_ARGUMENT;
+
+    hyperdb::AllocatorConfig allocator;
+    allocator.budget_bytes = config->budget_bytes;
+    allocator.context = config->context;
+    allocator.allocate = config->allocate;
+    allocator.deallocate = config->deallocate;
+    switch (config->kind) {
+    case HDB_ALLOCATOR_SYSTEM:
+        allocator.backend = hyperdb::AllocatorBackend::system;
+        break;
+    case HDB_ALLOCATOR_APPLICATION:
+        allocator.backend = hyperdb::AllocatorBackend::application;
+        if (!allocator.allocate || !allocator.deallocate)
+            return HDB_INVALID_ARGUMENT;
+        break;
+    case HDB_ALLOCATOR_HYPERMALLOC:
+        if (!hyperdb::MemoryResource::hypermalloc_available())
+            return HDB_UNSUPPORTED;
+        allocator.backend = hyperdb::AllocatorBackend::hypermalloc;
+        break;
+    default:
+        return HDB_INVALID_ARGUMENT;
+    }
+
     try {
-        *out_database = new hdb_database{};
+        *out_database = new hdb_database{allocator};
         return HDB_OK;
     } catch (const std::bad_alloc &) {
         return HDB_OUT_OF_MEMORY;
+    } catch (const std::invalid_argument &) {
+        return HDB_INVALID_ARGUMENT;
     } catch (...) {
         return HDB_INTERNAL_ERROR;
     }
+}
+
+extern "C" hdb_status hdb_database_get_allocator_stats(const hdb_database *database,
+                                                       hdb_allocator_stats *out_stats) {
+    if (!database || !out_stats)
+        return HDB_INVALID_ARGUMENT;
+    const auto stats = database->database.allocator_stats();
+    out_stats->struct_size = sizeof(*out_stats);
+    out_stats->current_bytes = stats.current_bytes;
+    out_stats->peak_bytes = stats.peak_bytes;
+    out_stats->allocation_count = stats.allocation_count;
+    out_stats->deallocation_count = stats.deallocation_count;
+    out_stats->failure_count = stats.failure_count;
+    out_stats->has_remaining_budget = stats.remaining_budget.has_value() ? 1 : 0;
+    out_stats->remaining_budget = stats.remaining_budget.value_or(0);
+    return HDB_OK;
 }
 
 extern "C" void hdb_database_destroy(hdb_database *database) { delete database; }

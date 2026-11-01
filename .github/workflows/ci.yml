@@ -32,6 +32,7 @@ jobs:
         run: >-
           cmake --build --preset debug --parallel 4 --target
           hyperdb_status_tests hyperdb_tests hyperdb_lexer_tests
+          hyperdb_memory_resource_tests hyperdb_allocator_backend_tests
           hyperdb_parser_tests hyperdb_index_tests hyperdb_vector_tests hyperdb
       - name: Verify integration and regression tests registered
         run: |
@@ -54,6 +55,7 @@ jobs:
           src/storage/*.h src/storage/*.cpp
           src/bridge/c_api.cpp
           tests/unit/status_tests.cpp tests/storage/file_system_tests.cpp
+          tests/unit/memory_resource_tests.cpp tests/unit/allocator_backend_tests.cpp
           tests/storage/page_format_tests.cpp tests/storage/disk_manager_tests.cpp
           tests/storage/device_storage_tests.cpp tests/storage/buffer_pool_tests.cpp
           tests/integration/statement_tests.cpp tests/integration/c_api_tests.c

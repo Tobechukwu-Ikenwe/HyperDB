@@ -2,6 +2,25 @@
 
 Updated: 2026-11-01. Baseline commit: `367d3e8`. Foundation and file I/O boundary: `19c998a`.
 
+Allocator milestone update (2026-11-01): inspected HyperMalloc at pinned commit
+`3258efd0742351a1045d51442ab5d10bee3d578c`; its standalone suite passed 13/13
+tests. Added a HyperDB PMR adapter for system, application callback, and
+optional HyperMalloc backends; per-database requested-byte accounting/budgets;
+an additive C API for backend selection and stats; and routing for database
+registry maps plus B-tree node/entry/child containers. The default Debug and
+optional HyperMalloc configurations each build and pass 19/19 CTest tests
+locally. `.github/workflows/hypermalloc.yml` is added but has not run on GitHub.
+Coverage remains partial: parser/AST, table rows and payloads, query allocations,
+vector-index internals, returned result objects, C handles, and snapshot/CLI
+temporaries remain outside the configured allocator. The byte budget is not a
+whole-process cap; fixed-memory operation and allocator speed claims are
+unsupported. Transaction rollback tests do not apply because HyperDB has no
+transaction API.
+
+Next: run the allocator workflow remotely when repository CI is available, then
+expand allocator-aware routing and deterministic failure injection. Do not mark
+the memory-budget or portability milestones complete based on this slice.
+
 Source audit on 2026-10-29 removed five unreferenced files and two CMake source entries (ADR 0009). Debug and Release each passed 15/15 tests after the cleanup. The older `Limit` and `filter_table` helpers remain because tests exercise them; `filter.cpp` also serves vector metadata search.
 
 The optimization history was consolidated in `optimizatoons.md` on 2026-10-31. It distinguishes recorded local timings from unmeasured storage work and notes gaps in the historical benchmark record. No new performance claim or engine behavior change was made in this documentation session.

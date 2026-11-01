@@ -1,0 +1,44 @@
+name: HyperMalloc integration
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hypermalloc-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux-hypermalloc:
+    name: Linux optional HyperMalloc backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - name: Checkout pinned HyperMalloc source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          repository: Tobechukwu-Ikenwe/HyperMalloc
+          ref: 3258efd0742351a1045d51442ab5d10bee3d578c
+          path: external/HyperMalloc
+      - name: Build and test HyperMalloc dependency
+        run: |
+          cmake -S external/HyperMalloc -B "$RUNNER_TEMP/hm-build" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$RUNNER_TEMP/hm-prefix"
+          cmake --build "$RUNNER_TEMP/hm-build" --parallel 4
+          ctest --test-dir "$RUNNER_TEMP/hm-build" --output-on-failure
+          cmake --install "$RUNNER_TEMP/hm-build"
+      - name: Configure HyperDB with optional backend
+        run: >-
+          cmake -S . -B build/hypermalloc -G Ninja
+          -DCMAKE_BUILD_TYPE=Debug
+          -DHYPERDB_ENABLE_HYPERMALLOC=ON
+          -DCMAKE_PREFIX_PATH="$RUNNER_TEMP/hm-prefix"
+      - name: Build HyperDB and all tests
+        run: cmake --build build/hypermalloc --parallel 4
+      - name: Run SQL and allocator regression tests
+        run: ctest --test-dir build/hypermalloc --output-on-failure
