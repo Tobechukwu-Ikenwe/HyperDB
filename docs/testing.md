@@ -8,7 +8,7 @@ cmake --build --preset debug --parallel 4
 ctest --preset debug --output-on-failure
 ```
 
-The same three commands work with `release`, `asan`, `ubsan`, `tsan`, `coverage`, and `framework` in place of `debug` after each preset is configured. The framework preset fetches pinned GoogleTest and Google Benchmark versions on first configure. `fuzz` uses Clang and builds `hyperdb_parser_fuzz`; run `build/fuzz/hyperdb_parser_fuzz build/fuzz/corpus/parser -max_total_time=60` for a local smoke run. The source corpus is copied into the build directory so fuzzing does not modify committed seeds. The required one-hour M1 fuzz exit has not been run.
+The same three commands work with `release`, `single-threaded`, `asan`, `ubsan`, `tsan`, `coverage`, and `framework` in place of `debug` after each preset is configured. The framework preset fetches pinned GoogleTest and Google Benchmark versions on first configure. `fuzz` uses Clang and builds `hyperdb_parser_fuzz`; run `build/fuzz/hyperdb_parser_fuzz build/fuzz/corpus/parser -max_total_time=60` for a local smoke run. The source corpus is copied into the build directory so fuzzing does not modify committed seeds. The required one-hour M1 fuzz exit has not been run.
 
 For the coverage gate, run `python3 tools/coverage_report.py --min-line 0.85` after the coverage preset's tests. This uses GCC's JSON gcov output, counts executable lines in `src/` excluding `src/shell/`, and exits nonzero below 85%. The CI coverage job runs the same command. Instrumentation flags are set before `hyperdb_core` is declared, so core code is included in sanitizer and coverage builds.
 

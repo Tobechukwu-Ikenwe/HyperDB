@@ -1,87 +1,101 @@
 name: CI
+
 on:
-  push:
   pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build:
+  unit-and-regression:
+    name: unit and SQL regression (${{ matrix.compiler }})
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: ubuntu-latest
-            compiler: gcc
-          - os: ubuntu-latest
-            compiler: clang
-          - os: macos-latest
-            compiler: clang
-    runs-on: ${{ matrix.os }}
+        compiler: [gcc, clang]
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Install Ninja on Linux
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y ninja-build
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - name: Install build tools
+        run: sudo apt-get update && sudo apt-get install -y ninja-build clang
       - name: Configure
         env:
           CXX: ${{ matrix.compiler == 'clang' && 'clang++' || 'g++' }}
         run: cmake --preset debug
       - name: Build
-        run: cmake --build --preset debug --parallel 4
-      - name: Test
-        run: ctest --preset debug --output-on-failure
-  sanitizer:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        preset: [asan, ubsan, tsan]
-    steps:
-      - uses: actions/checkout@v4
-      - run: sudo apt-get update && sudo apt-get install -y ninja-build
-      - run: cmake --preset ${{ matrix.preset }}
-      - run: cmake --build --preset ${{ matrix.preset }} --parallel 4
-      - run: ctest --preset ${{ matrix.preset }} --output-on-failure
-  release:
+        run: >-
+          cmake --build --preset debug --parallel 4 --target
+          hyperdb_status_tests hyperdb_tests hyperdb_lexer_tests
+          hyperdb_parser_tests hyperdb_index_tests hyperdb_vector_tests hyperdb
+      - name: Verify integration and regression tests registered
+        run: |
+          ctest --test-dir build/debug --show-only=json-v1 > build/debug/ctest-inventory.json
+          python3 tools/verify_test_registration.py build/debug/ctest-inventory.json hyperdb_bridge_tests hyperdb_cli_concurrency_tests hyperdb_sqlite_conformance_tests
+      - name: Run unit and SQL regression tests
+        run: ctest --preset debug --output-on-failure -L 'unit|regression'
+
+  style-and-analysis:
+    name: formatting and static analysis
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - run: sudo apt-get update && sudo apt-get install -y ninja-build
-      - run: cmake --preset release
-      - run: cmake --build --preset release --parallel 4
-      - run: ctest --preset release --output-on-failure
-  frameworks:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: sudo apt-get update && sudo apt-get install -y ninja-build
-      - run: cmake --preset framework
-      - run: cmake --build --preset framework --parallel 4
-      - run: ctest --preset framework --output-on-failure
-  coverage:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: sudo apt-get update && sudo apt-get install -y ninja-build
-      - run: cmake --preset coverage
-      - run: cmake --build --preset coverage --parallel 4
-      - run: ctest --preset coverage --output-on-failure
-      - run: python3 tools/coverage_report.py --min-line 0.85
-  fuzz-smoke:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: sudo apt-get update && sudo apt-get install -y ninja-build clang
-      - run: cmake --preset fuzz
-      - run: cmake --build --preset fuzz --parallel 4
-      - run: ctest --preset fuzz --output-on-failure
-      - run: build/fuzz/hyperdb_parser_fuzz build/fuzz/corpus/parser -max_total_time=10
-  style:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: sudo apt-get update && sudo apt-get install -y clang-format clang-tidy ninja-build
-      - name: Check new module formatting
-        run: clang-format --dry-run --Werror include/hyperdb/*.h src/common/*.h src/common/*.cpp src/storage/*.h src/storage/*.cpp tests/status_tests.cpp tests/file_system_tests.cpp tests/page_format_tests.cpp tests/disk_manager_tests.cpp tests/buffer_pool_tests.cpp tests/unit/*.cpp benchmarks/file_io_benchmark.cpp
-      - name: Configure lint compilation database
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - name: Install analysis tools
+        run: sudo apt-get update && sudo apt-get install -y clang-format clang-tidy ninja-build
+      - name: Check formatting
+        run: >-
+          clang-format --dry-run --Werror
+          include/hyperdb/*.h src/common/*.h src/common/*.cpp
+          src/storage/*.h src/storage/*.cpp
+          src/bridge/c_api.cpp
+          tests/unit/status_tests.cpp tests/storage/file_system_tests.cpp
+          tests/storage/page_format_tests.cpp tests/storage/disk_manager_tests.cpp
+          tests/storage/device_storage_tests.cpp tests/storage/buffer_pool_tests.cpp
+          tests/integration/statement_tests.cpp tests/integration/c_api_tests.c
+          benchmarks/workloads/file_io_benchmark.cpp
+      - name: Configure compilation database
         run: cmake --preset debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-      - name: Check new module diagnostics
-        run: clang-tidy -p build/debug src/common/logging.cpp src/common/crc32c.cpp src/storage/posix_file.cpp src/storage/fault_file.cpp src/storage/page_format.cpp src/storage/disk_manager.cpp src/storage/buffer_pool.cpp --quiet
+      - name: Run clang-tidy
+        run: >-
+          clang-tidy -p build/debug --quiet
+          src/common/logging.cpp src/common/crc32c.cpp
+          src/storage/posix_file.cpp src/storage/fault_file.cpp
+          src/storage/page_format.cpp src/storage/disk_manager.cpp
+          src/storage/buffer_pool.cpp src/bridge/c_api.cpp
+
+  coverage:
+    name: coverage gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - name: Install build tools
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+      - name: Configure coverage build
+        run: cmake --preset coverage
+      - name: Build and run tests
+        run: |
+          cmake --build --preset coverage --parallel 4
+          ctest --preset coverage --output-on-failure
+      - name: Enforce existing line coverage floor
+        run: python3 tools/coverage_report.py --min-line 0.85
+
+  frameworks:
+    name: pinned test and benchmark frameworks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - name: Configure framework targets
+        run: cmake --preset framework
+      - name: Build and run framework tests
+        run: |
+          cmake --build --preset framework --parallel 4
+          ctest --preset framework --output-on-failure
+
+  integration:
+    name: integration and storage tests
+    uses: ./.github/workflows/integration-tests.yml

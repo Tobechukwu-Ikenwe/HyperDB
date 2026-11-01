@@ -1,0 +1,69 @@
+name: Benchmarks
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  reproducible-workloads:
+    name: release workloads and resource metadata
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          fetch-depth: 0
+      - name: Install build tools
+        run: sudo apt-get update && sudo apt-get install -y ninja-build time
+      - name: Select comparison baseline
+        id: baseline
+        run: |
+          baseline='${{ github.event.before }}'
+          if [ -z "$baseline" ] || [ "$baseline" = "0000000000000000000000000000000000000000" ]; then
+            baseline="$(git rev-parse HEAD^ )"
+          fi
+          echo "sha=$baseline" >> "$GITHUB_OUTPUT"
+      - name: Build baseline workload
+        run: |
+          git worktree add --detach /tmp/hyperdb-benchmark-baseline '${{ steps.baseline.outputs.sha }}'
+          cmake -S /tmp/hyperdb-benchmark-baseline -B /tmp/hyperdb-benchmark-baseline/build/release -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build /tmp/hyperdb-benchmark-baseline/build/release --target hyperdb_workloads --parallel 4
+      - name: Configure and build candidate Release
+        run: |
+          cmake --preset release
+          cmake --build --preset release --parallel 4 --target hyperdb_workloads hyperdb_benchmark
+      - name: Compare paired workload samples
+        run: >-
+          python3 tools/benchmark_compare.py
+          --baseline /tmp/hyperdb-benchmark-baseline/build/release/hyperdb_workloads
+          --candidate build/release/hyperdb_workloads
+          --baseline-commit '${{ steps.baseline.outputs.sha }}'
+          --threshold 0.35
+          --output benchmarks/results/workload-comparison.json
+      - name: Capture runner and build metadata
+        run: |
+          {
+            echo "commit=$GITHUB_SHA"
+            echo "runner=$RUNNER_OS $RUNNER_ARCH"
+            uname -a
+            lscpu
+            c++ --version
+            cmake --version
+          } > benchmarks/results/runner-metadata.txt
+      - name: Run HyperDB workload benchmark
+        run: /usr/bin/time -v ./build/release/hyperdb_workloads > benchmarks/results/hyperdb-workloads.txt 2> benchmarks/results/hyperdb-workloads-resource.txt
+      - name: Run equality comparison workload
+        run: |
+          /usr/bin/time -v ./build/release/hyperdb_benchmark 100000 200 > benchmarks/results/equality-hyperdb.txt 2> benchmarks/results/equality-hyperdb-resource.txt
+          /usr/bin/time -v python3 benchmarks/baselines/sqlite_baseline.py 100000 200 > benchmarks/results/equality-sqlite.txt 2> benchmarks/results/equality-sqlite-resource.txt
+      - name: Upload raw measurements
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: hyperdb-benchmarks-${{ github.sha }}
+          path: benchmarks/results/*
+          if-no-files-found: error
+          retention-days: 90

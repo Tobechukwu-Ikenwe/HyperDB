@@ -2,7 +2,7 @@
 
 Run `cmake -S . -B build -DCMAKE_BUILD_TYPE=Release`, `cmake --build build -j 4`, and `./build/hyperdb_workloads`. The suite measures one in-memory operation at a time, except `snapshot_save` and `snapshot_load`, which include file I/O and sync. Setup and fixture creation are outside the timed loops. SQL run through the local UI includes process startup and snapshot loading or saving.
 
-These measurements were taken on a 13th Gen Intel Core i7-1355U with GCC 15.2.0, Release `-O3`, on 2026-10-26. The "before" binary came from `git archive HEAD` with only `benchmarks/workloads.cpp` and its CMake target copied in. The "after" binary contains the executor changes. Each value is the median milliseconds per operation from seven interleaved runs of each binary. CPU frequency, cache state, and filesystem activity can change the numbers; this is a local workload comparison, not a general SQLite comparison.
+These measurements were taken on a 13th Gen Intel Core i7-1355U with GCC 15.2.0, Release `-O3`, on 2026-10-26. The "before" binary came from `git archive HEAD` with only `benchmarks/workloads/workloads.cpp` and its CMake target copied in. The "after" binary contains the executor changes. Each value is the median milliseconds per operation from seven interleaved runs of each binary. CPU frequency, cache state, and filesystem activity can change the numbers; this is a local workload comparison, not a general SQLite comparison.
 
 | Workload | Fixture | Before ms | After ms |
 | --- | --- | ---: | ---: |

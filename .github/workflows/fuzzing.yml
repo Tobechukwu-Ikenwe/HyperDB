@@ -1,0 +1,33 @@
+name: Fuzzing
+
+on:
+  pull_request:
+  workflow_call:
+    inputs:
+      max_seconds:
+        type: number
+        required: false
+        default: 30
+
+permissions:
+  contents: read
+
+jobs:
+  parser-fuzzer:
+    name: parser fuzz ${{ github.event_name == 'pull_request' && 'smoke' || format('{0}s', inputs.max_seconds) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - name: Install Clang and Ninja
+        run: sudo apt-get update && sudo apt-get install -y clang ninja-build
+      - name: Configure fuzz build
+        run: cmake --preset fuzz
+      - name: Build fuzz target and regression suite
+        run: cmake --build --preset fuzz --parallel 4
+      - name: Run correctness tests
+        run: ctest --preset fuzz --output-on-failure
+      - name: Run parser fuzzer
+        env:
+          FUZZ_SECONDS: ${{ github.event_name == 'pull_request' && 30 || inputs.max_seconds }}
+        run: build/fuzz/hyperdb_parser_fuzz build/fuzz/corpus/parser -max_total_time="$FUZZ_SECONDS" -print_final_stats=1

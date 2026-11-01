@@ -27,8 +27,7 @@ void set_error(char *buffer, size_t capacity, const char *message) noexcept {
     buffer[length] = '\0';
 }
 
-hdb_status exception_status(const std::exception &error, char *buffer,
-                            size_t capacity) noexcept {
+hdb_status exception_status(const std::exception &error, char *buffer, size_t capacity) noexcept {
     set_error(buffer, capacity, error.what());
     return HDB_SQL_ERROR;
 }
@@ -50,9 +49,8 @@ extern "C" hdb_status hdb_database_create(hdb_database **out_database) {
 
 extern "C" void hdb_database_destroy(hdb_database *database) { delete database; }
 
-extern "C" hdb_status hdb_execute(hdb_database *database, const char *sql,
-                                   hdb_result **out_result, char *error_buffer,
-                                   size_t error_buffer_size) {
+extern "C" hdb_status hdb_execute(hdb_database *database, const char *sql, hdb_result **out_result,
+                                  char *error_buffer, size_t error_buffer_size) {
     if (out_result)
         *out_result = nullptr;
     if (!database || !sql || !out_result) {
@@ -93,10 +91,8 @@ extern "C" size_t hdb_result_row_count(const hdb_result *result) {
     return result ? result->result.query.rows.size() : 0;
 }
 
-extern "C" hdb_status hdb_result_column_name(const hdb_result *result,
-                                               size_t column,
-                                               const char **out_name,
-                                               size_t *out_size) {
+extern "C" hdb_status hdb_result_column_name(const hdb_result *result, size_t column,
+                                             const char **out_name, size_t *out_size) {
     if (!result || !out_name || !out_size)
         return HDB_INVALID_ARGUMENT;
     if (column >= result->result.query.columns.size())
@@ -107,8 +103,8 @@ extern "C" hdb_status hdb_result_column_name(const hdb_result *result,
     return HDB_OK;
 }
 
-extern "C" hdb_status hdb_result_value(const hdb_result *result, size_t row,
-                                        size_t column, hdb_value *out_value) {
+extern "C" hdb_status hdb_result_value(const hdb_result *result, size_t row, size_t column,
+                                       hdb_value *out_value) {
     if (!result || !out_value || row >= result->result.query.rows.size() ||
         column >= result->result.query.columns.size() ||
         column >= result->result.query.rows[row].size())

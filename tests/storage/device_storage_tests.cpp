@@ -13,16 +13,14 @@
 namespace {
 class MemoryFile final : public hyperdb::File {
   public:
-    explicit MemoryFile(std::shared_ptr<std::vector<std::byte>> bytes)
-        : bytes_(std::move(bytes)) {}
+    explicit MemoryFile(std::shared_ptr<std::vector<std::byte>> bytes) : bytes_(std::move(bytes)) {}
 
-    hyperdb::Status read_at(std::uint64_t offset,
-                            std::span<std::byte> output) noexcept override {
+    hyperdb::Status read_at(std::uint64_t offset, std::span<std::byte> output) noexcept override {
         std::lock_guard guard(mutex_);
         if (offset > bytes_->size() || output.size() > bytes_->size() - offset)
             return {hyperdb::ErrorCode::corruption, "Read outside memory device"};
-        std::copy_n(bytes_->begin() + static_cast<std::ptrdiff_t>(offset),
-                    output.size(), output.begin());
+        std::copy_n(bytes_->begin() + static_cast<std::ptrdiff_t>(offset), output.size(),
+                    output.begin());
         return {};
     }
 
@@ -67,8 +65,7 @@ int main() {
     assert(allocated.ok() && allocated.value() == 1);
     auto page = manager->read_page(1);
     assert(page.ok());
-    const std::array<std::byte, 3> record{std::byte{0x10}, std::byte{0x20},
-                                          std::byte{0x30}};
+    const std::array<std::byte, 3> record{std::byte{0x10}, std::byte{0x20}, std::byte{0x30}};
     assert(insert_record(page.value(), record, 1).ok());
     assert(manager->write_page(1, page.value()).ok());
     manager.reset();

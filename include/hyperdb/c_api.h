@@ -50,9 +50,8 @@ hdb_status hdb_database_create(hdb_database **out_database);
 void hdb_database_destroy(hdb_database *database);
 
 /* Executes one SQL statement. Destroy *out_result with hdb_result_destroy. */
-hdb_status hdb_execute(hdb_database *database, const char *sql,
-                       hdb_result **out_result, char *error_buffer,
-                       size_t error_buffer_size);
+hdb_status hdb_execute(hdb_database *database, const char *sql, hdb_result **out_result,
+                       char *error_buffer, size_t error_buffer_size);
 
 void hdb_result_destroy(hdb_result *result);
 int hdb_result_is_write(const hdb_result *result);
@@ -62,8 +61,8 @@ size_t hdb_result_column_count(const hdb_result *result);
 size_t hdb_result_row_count(const hdb_result *result);
 
 /* Column-name and text/blob data pointers are borrowed from result. */
-hdb_status hdb_result_column_name(const hdb_result *result, size_t column,
-                                  const char **out_name, size_t *out_size);
+hdb_status hdb_result_column_name(const hdb_result *result, size_t column, const char **out_name,
+                                  size_t *out_size);
 hdb_status hdb_result_value(const hdb_result *result, size_t row, size_t column,
                             hdb_value *out_value);
 

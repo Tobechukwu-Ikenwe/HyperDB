@@ -1,0 +1,31 @@
+name: Integration tests
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  storage-and-integration:
+    name: storage failures, integration, and concurrency
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - name: Install build tools
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+      - name: Configure Debug
+        run: cmake --preset debug
+      - name: Build integration and storage test targets
+        run: >-
+          cmake --build --preset debug --parallel 4 --target
+          hyperdb_c_api_tests hyperdb_file_system_tests hyperdb_page_format_tests
+          hyperdb_disk_manager_tests hyperdb_device_storage_tests
+          hyperdb_buffer_pool_tests hyperdb_persistence_tests
+          hyperdb_statement_tests hyperdb_bridge hyperdb
+      - name: Verify required test registrations
+        run: |
+          ctest --test-dir build/debug --show-only=json-v1 > build/debug/ctest-inventory.json
+          python3 tools/verify_test_registration.py build/debug/ctest-inventory.json hyperdb_c_api_tests hyperdb_persistence_tests hyperdb_statement_tests hyperdb_bridge_tests hyperdb_file_system_tests hyperdb_page_format_tests hyperdb_disk_manager_tests hyperdb_device_storage_tests hyperdb_buffer_pool_tests hyperdb_cli_concurrency_tests
+      - name: Run integration, storage, and concurrency tests
+        run: ctest --preset debug --output-on-failure -L 'integration|storage|concurrency'

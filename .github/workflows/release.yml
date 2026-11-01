@@ -1,0 +1,57 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  verify-and-publish:
+    name: verified Linux release artifact
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          fetch-depth: 0
+      - name: Install build tools
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+      - name: Configure Release
+        run: cmake --preset release
+      - name: Build complete Release suite
+        run: cmake --build --preset release --parallel 4
+      - name: Verify full test registration
+        run: |
+          ctest --test-dir build/release --show-only=json-v1 > build/release/ctest-inventory.json
+          python3 tools/verify_test_registration.py build/release/ctest-inventory.json hyperdb_bridge_tests hyperdb_cli_concurrency_tests hyperdb_sqlite_conformance_tests
+      - name: Run complete Release tests
+        run: ctest --preset release --output-on-failure
+      - name: Verify C embedding example
+        run: ./build/release/hyperdb_c_example
+      - name: Verify C++ embedding example
+        run: ./build/release/hyperdb_cpp_example
+      - name: Assemble source and Linux x86_64 artifacts
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          mkdir -p staging/HyperDB-${RELEASE_TAG}/bin staging/HyperDB-${RELEASE_TAG}/lib staging/HyperDB-${RELEASE_TAG}/include/hyperdb
+          cp build/release/hyperdb build/release/hyperdb_c_example build/release/hyperdb_cpp_example staging/HyperDB-${RELEASE_TAG}/bin/
+          cp build/release/libhyperdb_core.a build/release/libhyperdb_c_api.a staging/HyperDB-${RELEASE_TAG}/lib/
+          cp include/hyperdb/c_api.h staging/HyperDB-${RELEASE_TAG}/include/hyperdb/
+          cp README.md staging/HyperDB-${RELEASE_TAG}/
+          tar -C staging -czf "HyperDB-${RELEASE_TAG}-linux-x86_64.tar.gz" "HyperDB-${RELEASE_TAG}"
+          git archive --format=tar.gz --prefix="HyperDB-${RELEASE_TAG}-source/" "$RELEASE_TAG" > "HyperDB-${RELEASE_TAG}-source.tar.gz"
+      - name: Publish verified assets after environment approval
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" "HyperDB-${RELEASE_TAG}-linux-x86_64.tar.gz" "HyperDB-${RELEASE_TAG}-source.tar.gz" --clobber
+          else
+            gh release create "$RELEASE_TAG" "HyperDB-${RELEASE_TAG}-linux-x86_64.tar.gz" "HyperDB-${RELEASE_TAG}-source.tar.gz" --title "$RELEASE_TAG" --generate-notes
+          fi

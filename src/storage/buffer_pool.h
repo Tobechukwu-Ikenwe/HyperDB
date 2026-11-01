@@ -1,7 +1,7 @@
 #pragma once
 
-#include "storage/disk_manager.h"
 #include "hyperdb/synchronization.h"
+#include "storage/disk_manager.h"
 
 #include <cstddef>
 #include <cstdint>

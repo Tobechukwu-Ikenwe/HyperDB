@@ -1,0 +1,73 @@
+name: Portability
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: portability-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  single-threaded:
+    name: Linux single-threaded profile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - name: Install Ninja
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+      - name: Configure no-mutex profile
+        run: cmake --preset single-threaded
+      - name: Build and test
+        run: |
+          cmake --build --preset single-threaded --parallel 4
+          ctest --test-dir build/single-threaded --show-only=json-v1 > build/single-threaded/ctest-inventory.json
+          python3 tools/verify_test_registration.py build/single-threaded/ctest-inventory.json hyperdb_bridge_tests hyperdb_cli_concurrency_tests hyperdb_sqlite_conformance_tests
+          ctest --preset single-threaded --output-on-failure
+      - name: Verify core has no mutex lock symbols
+        run: |
+          if nm -u build/single-threaded/libhyperdb_core.a | grep -E 'pthread_mutex|mutex.*(lock|unlock)'; then
+            echo 'Unexpected mutex lock symbol in the single-threaded core' >&2
+            exit 1
+          fi
+
+  core-only:
+    name: Windows shared core without POSIX or snapshot targets
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - name: Configure core-only profile
+        run: cmake -S . -B build/core-only -G Ninja -DCMAKE_BUILD_TYPE=Debug -DHYPERDB_SINGLE_THREADED=ON
+      - name: Build portable core, C API, and injected-storage tests
+        run: >-
+          cmake --build build/core-only --parallel 4 --target
+          hyperdb_c_api_tests hyperdb_device_storage_tests
+          hyperdb_c_example hyperdb_cpp_example
+      - name: Run core-only tests
+        run: |
+          ctest --test-dir build/core-only --show-only=json-v1 > build/core-only/ctest-inventory.json
+          python3 tools/verify_test_registration.py build/core-only/ctest-inventory.json hyperdb_c_api_tests hyperdb_device_storage_tests
+          ctest --test-dir build/core-only --output-on-failure -R 'hyperdb_(c_api|device_storage)_tests'
+
+  embedded-linux-cross-compile:
+    name: AArch64 embedded-Linux core cross-compilation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - name: Install cross toolchain
+        run: sudo apt-get update && sudo apt-get install -y ninja-build gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+      - name: Configure AArch64 Linux target
+        run: >-
+          cmake -S . -B build/aarch64 -G Ninja
+          -DCMAKE_SYSTEM_NAME=Linux
+          -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc
+          -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++
+          -DHYPERDB_SINGLE_THREADED=ON
+      - name: Compile shared core only
+        run: cmake --build build/aarch64 --parallel 4 --target hyperdb_core
+      - name: Report validation boundary
+        run: echo 'Cross-compilation passed; this job does not execute on AArch64 hardware.' >> "$GITHUB_STEP_SUMMARY"

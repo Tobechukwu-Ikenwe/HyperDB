@@ -19,8 +19,8 @@ class DiskManager {
     open(FileSystem &file_system, const std::filesystem::path &path, bool create) noexcept;
 
     /** Takes ownership of an application-provided random-access storage file. */
-    [[nodiscard]] static Result<std::unique_ptr<DiskManager>>
-    open(std::unique_ptr<File> file, bool create) noexcept;
+    [[nodiscard]] static Result<std::unique_ptr<DiskManager>> open(std::unique_ptr<File> file,
+                                                                   bool create) noexcept;
 
     [[nodiscard]] std::uint64_t page_count() const noexcept {
         return page_count_.load(std::memory_order_acquire);

@@ -37,7 +37,7 @@ An initial C embedding API is available in `include/hyperdb/c_api.h`. It support
 
 ## Local SQL workbench
 
-Run `cmake --build build -j 4`, then `python3 python/local_ui.py` and open `http://127.0.0.1:8765`. Enter a database name, enter one SQL statement, and run it. New databases are created on first use; HyperDB saves and reloads their state behind the interface. Results and errors appear as readable text. The UI runs locally without extra Python packages. The CLI's `--db-json` mode supplies typed results to the UI. Run `./build/hyperdb_workloads` in a terminal for the developer benchmark suite. Use `python3 tests/ui_smoke.py` while the server is running to check the UI API.
+Run `cmake --build build -j 4`, then `python3 python/local_ui.py` and open `http://127.0.0.1:8765`. Enter a database name, enter one SQL statement, and run it. New databases are created on first use; HyperDB saves and reloads their state behind the interface. Results and errors appear as readable text. The UI runs locally without extra Python packages. The CLI's `--db-json` mode supplies typed results to the UI. Run `./build/hyperdb_workloads` in a terminal for the developer benchmark suite. Use `python3 tests/integration/ui_smoke.py` while the server is running to check the UI API.
 
 Snapshot CLI modes (`--init`, `--save-demo`, `--db`, and `--index`) require POSIX file locking and leave a `.lock` sidecar file. The CLI holds the lock across load, execution, and save, so concurrent CLI writers serialize. The C++ library itself has no cross-process lock. Saving writes and syncs a temporary sibling on POSIX systems, renames it into place, then syncs the directory. There is no write-ahead log or multi-statement transaction; power-loss recovery has not been fault-injection tested, and guarantees depend on the filesystem and hardware.
 
@@ -59,7 +59,7 @@ Build a Release configuration and run the same deterministic equality workload i
 cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release
 cmake --build build-release -j 4
 ./build-release/hyperdb_benchmark 100000 200
-python3 benchmarks/sqlite_baseline.py 100000 200
+python3 benchmarks/baselines/sqlite_baseline.py 100000 200
 ```
 
 These report elapsed milliseconds for repeated scan and indexed lookups. Python/SQLite uses cached prepared statements while HyperDB parses each query, and setup time is excluded. Treat results as workload-specific measurements, not a general engine ranking.
@@ -73,6 +73,7 @@ Run `./build/hyperdb_workloads` for a broader HyperDB suite covering parsing, sc
 - [Portability audit](docs/architecture/PORTABILITY_AUDIT.md)
 - [Portable architecture plan](docs/architecture/PORTABLE_ARCHITECTURE.md)
 - [Portability implementation progress](docs/architecture/IMPLEMENTATION_PROGRESS.md)
+- [CI/CD workflows and required checks](docs/CI_CD.md)
 - [Design decisions](docs/DESIGN_DECISIONS.md)
 - [Learning guide](docs/LEARNING_GUIDE.md)
 - [Development log](docs/DEVELOPMENT_LOG.md)

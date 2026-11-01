@@ -14,6 +14,8 @@ Stage 4 has begun with `DiskManager::open(std::unique_ptr<File>, create)`, allow
 
 The `single-threaded` CMake preset now selects a no-op `Mutex` implementation for the core. The Linux Debug profile built and passed 17/17 tests, and `nm -u build/single-threaded/libhyperdb_core.a` reported no mutex lock symbols. Shared handles must remain confined to one thread in this mode. Windows and embedded toolchains are still unverified.
 
+The test tree now separates unit, integration, regression, storage, fuzz, transaction, and fault-injection documentation; benchmark workloads, methodology, and results are likewise separated. Eight GitHub Actions workflows cover PR/main checks, storage and integration, Linux single-threaded and Windows/AArch64 compile profiles, sanitizers, parser fuzzing, benchmark comparison, nightly stress, and release packaging. The benchmark workflow builds the parent revision and candidate on one runner, repeats 7 samples, and applies a broad 35% threshold only above a 0.01 ms baseline. Local Debug, Release, single-threaded, and coverage profiles each passed 17/17 tests; coverage was 1,701/1,874 lines (90.8%, above the 85% floor). All workflow YAML parsed locally, formatting passed, and the benchmark comparator produced seven paired samples over 14 workloads in a same-binary smoke check. These workflows have not yet run on GitHub; no CI/CD operational claim is made. Historical run 40803141644 still has an unidentified macOS CTest failure.
+
 ## Milestones
 
 | Milestone | State | Reproducible evidence |
@@ -36,9 +38,10 @@ The `single-threaded` CMake preset now selects a no-op `Mutex` implementation fo
 - HDB-6: GCC 15 Release emits `-Wfree-nonheap-object` in libstdc++ `std::variant` copy assignment while compiling legacy query and statement code. ADR 0007 suppresses this diagnostic only for GCC 15+ Release. Compare compiler versions and investigate the source path before removing the exemption.
 - HDB-7: LeakSanitizer cannot start inside this development sandbox because of process tracing; local ASan evidence excludes leak checking. GitHub Actions run 40803141644 passed its ASan job with default settings.
 - HDB-8: macOS CI built successfully but `ctest` returned exit code 8 in run 40803141644. The public job metadata does not identify the failed test; retrieve the step log or reproduce on macOS before changing platform behavior.
+- HDB-9: Newly authored GitHub workflows have only been syntax-checked locally. Windows, AArch64, framework fetch, coverage workflow, release environment approval, and all new hosted jobs remain unverified until actual GitHub Actions runs complete.
 
 ## Next steps
 
-Resolve the macOS CI test failure to complete M0. Continue M1 with a WAL format and recovery path before replacing legacy snapshot persistence; migrate snapshot/CLI I/O through the `FileSystem` boundary with compatibility tests. Do not close M1 without its stated long-running differential, fuzz, and restart criteria.
+Push the workflow changes and inspect the resulting GitHub Actions runs; fix hosted failures before describing the CI system as operational. Resolve the historical macOS failure if its log becomes available. Continue M1 with a WAL format and recovery path before replacing legacy snapshot persistence; migrate snapshot/CLI I/O through the `FileSystem` boundary with compatibility tests. Do not close M1 without its stated long-running differential, fuzz, and restart criteria.
 
 For the portability program, continue Stage 3 by moving snapshot persistence behind injected storage, then add allocator/synchronization contracts and the tested C embedding API. Do not claim Windows, RTOS, bare-metal, or fixed-memory support until their stated validation gates pass.
