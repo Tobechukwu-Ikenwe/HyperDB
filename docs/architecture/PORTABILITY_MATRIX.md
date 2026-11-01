@@ -4,7 +4,7 @@ Updated: 2026-11-01. `Verified` means a runnable target executed the listed test
 
 | Target/profile | Build/runtime evidence | SQL and storage today | Memory/dependencies | Status |
 | --- | --- | --- | --- | --- |
-| Linux native C++ and C API | Local GCC Debug 16/16 CTest targets on 2026-11-01; earlier CI Linux GCC/Clang jobs passed on older commit | Documented SQL subset and `HDBSNAP1` snapshots work; page path separate; no transaction recovery. C API is in-memory and single-threaded per handle. | Full C++20 STL, exceptions, system heap, filesystem, POSIX; no measured peak or allocator injection | Partially verified |
+| Linux native C++ and C API | Local GCC Debug and Release 16/16 CTest targets on 2026-11-01; earlier CI Linux GCC/Clang jobs passed on older commit | Documented SQL subset and `HDBSNAP1` snapshots work; page path separate; no transaction recovery. C API is in-memory and single-threaded per handle. | Full C++20 STL, exceptions, system heap, filesystem, POSIX for CLI/adapters; core still uses `std::mutex`; no measured peak or allocator injection | Partially verified |
 | macOS native C++ | Earlier CI built; CTest failed with unknown test | Same intended code path; behavior not fully verified | Full C++20 STL, exceptions, heap, POSIX-like services | Blocked by test failure |
 | Windows native | No build or run | POSIX file source is compiled unconditionally; CLI lock unavailable | Windows adapter absent | Unsupported |
 | Embedded Linux | No cross-build or device test | Linux-like adapter may be possible; no resource guarantee | Full runtime currently needed | Planned |

@@ -1,5 +1,7 @@
 # Storage architecture
 
+Updated: 2026-11-01. The legacy `Database::save/load(path)` implementation is isolated in `hyperdb_snapshot_compat`; it is not part of the page store or portable core. It still uses filesystem streams, paths, and POSIX sync on Unix. A callback-based storage contract and page-backed SQL persistence remain unimplemented.
+
 Status: target design. The active SQL path remains the `HDBSNAP1` whole-file snapshot. The page path is experimental and not a production database.
 
 ## Logical and physical layers

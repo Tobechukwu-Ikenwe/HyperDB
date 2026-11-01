@@ -25,7 +25,7 @@ There is one semantic implementation. Build profiles select adapters and resourc
 | Storage | Versioned page codec, heap/catalog/index pages, allocation/reclamation, checksum and corruption checks. | Extend `page_format` and `disk_manager`; migrate `Database` tables and in-memory B-tree incrementally. |
 | Pager | Cache byte cap, pin/unpin ownership, dirty tracking, eviction, and storage sync. | Extend `BufferPool`; a page guard prevents eviction while referenced. |
 | Transactions | Single-writer commit, rollback, replay, checkpoint, durability outcomes. | No current transaction manager; legacy snapshot save is a compatibility path until migration. |
-| Platform | Logical storage, memory, optional mutex, and only genuinely needed clock services. | Move `posix_file.cpp`, path opening, snapshot lock, and OS calls out of core target. |
+| Platform | Logical storage, memory, optional mutex, and only genuinely needed clock services. | `posix_file.cpp` and snapshot compatibility I/O are separate targets now. Move snapshot serialization to callbacks, eliminate path types from portable interfaces, and make mutex selection optional. |
 
 The initial C API in `include/hyperdb/c_api.h` supports in-memory create/destroy, one-statement execution, typed result access, and status codes; it catches exceptions at the C boundary. It has no prepared statement, transaction, configuration, or allocator API yet. The C++ facade may use C++20 conveniences but must not redefine database behavior. Each handle is currently single-threaded. Existing direct C++ APIs remain available during migration, with deprecation only after equivalent behavior and snapshot compatibility are tested.
 

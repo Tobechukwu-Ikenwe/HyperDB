@@ -34,7 +34,6 @@ add_library(hyperdb_core
     src/parser/lexer.cpp
     src/parser/parser.cpp
     src/database/database.cpp
-    src/database/persistence.cpp
     src/database/TableData/schema.cpp
     src/database/Indexes/btree.cpp
     src/database/Indexes/vector_index.cpp
@@ -57,18 +56,22 @@ add_library(hyperdb_posix_file src/storage/posix_file.cpp)
 target_link_libraries(hyperdb_posix_file PUBLIC hyperdb_core)
 target_compile_options(hyperdb_posix_file PRIVATE -Wall -Wextra -Wpedantic -Werror)
 
+add_library(hyperdb_snapshot_compat src/database/persistence.cpp)
+target_link_libraries(hyperdb_snapshot_compat PUBLIC hyperdb_core)
+target_compile_options(hyperdb_snapshot_compat PRIVATE -Wall -Wextra -Wpedantic -Werror)
+
 add_library(hyperdb_c_api src/bridge/c_api.cpp)
 target_link_libraries(hyperdb_c_api PUBLIC hyperdb_core)
 target_compile_options(hyperdb_c_api PRIVATE -Wall -Wextra -Wpedantic -Werror)
 
 add_executable(hyperdb src/main.cpp)
-target_link_libraries(hyperdb PRIVATE hyperdb_core)
+target_link_libraries(hyperdb PRIVATE hyperdb_snapshot_compat)
 
 add_executable(hyperdb_benchmark benchmarks/benchmark.cpp)
 target_link_libraries(hyperdb_benchmark PRIVATE hyperdb_core)
 
 add_executable(hyperdb_workloads benchmarks/workloads.cpp)
-target_link_libraries(hyperdb_workloads PRIVATE hyperdb_core)
+target_link_libraries(hyperdb_workloads PRIVATE hyperdb_snapshot_compat)
 
 add_executable(hyperdb_vector_demo examples/vector_search.cpp)
 target_link_libraries(hyperdb_vector_demo PRIVATE hyperdb_core)
@@ -154,11 +157,11 @@ target_link_libraries(hyperdb_vector_tests PRIVATE hyperdb_core)
 add_test(NAME hyperdb_vector_tests COMMAND hyperdb_vector_tests)
 
 add_executable(hyperdb_persistence_tests tests/persistence_tests.cpp)
-target_link_libraries(hyperdb_persistence_tests PRIVATE hyperdb_core)
+target_link_libraries(hyperdb_persistence_tests PRIVATE hyperdb_snapshot_compat)
 add_test(NAME hyperdb_persistence_tests COMMAND hyperdb_persistence_tests)
 
 add_executable(hyperdb_statement_tests tests/statement_tests.cpp)
-target_link_libraries(hyperdb_statement_tests PRIVATE hyperdb_core)
+target_link_libraries(hyperdb_statement_tests PRIVATE hyperdb_snapshot_compat)
 add_test(NAME hyperdb_statement_tests COMMAND hyperdb_statement_tests)
 
 find_package(Python3 COMPONENTS Interpreter QUIET)
