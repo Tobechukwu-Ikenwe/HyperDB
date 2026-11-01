@@ -2,7 +2,7 @@
 
 Updated: 2026-11-01. The legacy `Database::save/load(path)` implementation is isolated in `hyperdb_snapshot_compat`; it is not part of the page store or portable core. It still uses filesystem streams, paths, and POSIX sync on Unix. A callback-based storage contract and page-backed SQL persistence remain unimplemented.
 
-Status: target design. The active SQL path remains the `HDBSNAP1` whole-file snapshot. The page path is experimental and not a production database.
+Status: target design, with an initial injectable page-file path. `DiskManager::open(std::unique_ptr<File>, create)` takes ownership of a caller-provided `File`; the memory-backed contract test is in [device_storage_tests.cpp](../../tests/device_storage_tests.cpp). The active SQL path remains the `HDBSNAP1` whole-file snapshot. The page path is experimental and not a production database.
 
 ## Logical and physical layers
 
@@ -12,7 +12,7 @@ The existing page format uses fixed 8192-byte pages, explicit little-endian fiel
 
 | Component | Current | Required next invariant |
 | --- | --- | --- |
-| File/device I/O | POSIX positioned file adapter and `FileSystem::open(path)` | Core-level logical device callback; adapters handle paths, alignment, capacity, and durable barriers. |
+| File/device I/O | `File` exposes positioned reads/writes, size, and sync; `DiskManager` accepts a `File` directly or via `FileSystem::open(path)`. No geometry/capability report yet. | Core-level capability-checked logical device callback; adapters handle paths, alignment, capacity, and durable barriers. |
 | Page codec | Checksummed fixed slotted pages | Versioned size, page types, bounded record/overflow validation, golden format fixtures. |
 | Allocation | Append page then publish count; orphan tail tolerated | Free-page tracking, reclamation, and crash-safe metadata updates. |
 | Pager | Copy cache with dirty flag, round-robin victim | Pin guards, bounded cache bytes, eviction policy, write ordering, and error propagation. |

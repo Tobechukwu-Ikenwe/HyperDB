@@ -21,7 +21,14 @@ Result<std::unique_ptr<DiskManager>> DiskManager::open(FileSystem &file_system,
     if (!opened.ok()) {
         return opened.status();
     }
-    auto file = std::move(opened).value();
+    return open(std::move(opened).value(), create);
+}
+
+Result<std::unique_ptr<DiskManager>> DiskManager::open(std::unique_ptr<File> file,
+                                                       bool create) noexcept {
+    if (!file) {
+        return Status{ErrorCode::invalid_argument, "Storage file is null"};
+    }
     const auto file_size = file->size();
     if (!file_size.ok()) {
         return file_size.status();

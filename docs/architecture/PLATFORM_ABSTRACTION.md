@@ -1,6 +1,6 @@
 # Platform abstraction contract
 
-Status: target interface contract; no implementation or target support claim. See [ADR 0010](../decisions/0010-portable-core-contract.md).
+Status: target interface contract; no target support claim. The experimental page path can take an application-provided `hyperdb::File` through `DiskManager::open(unique_ptr<File>, create)`, but storage geometry, memory, and synchronization injection are not implemented. See [ADR 0010](../decisions/0010-portable-core-contract.md).
 
 ## Logical storage
 

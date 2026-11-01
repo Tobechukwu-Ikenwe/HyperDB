@@ -10,6 +10,8 @@ The portability audit and target contracts were recorded in `docs/architecture/P
 
 Stage 3 now also has an initial opaque C API in `include/hyperdb/c_api.h`, C and C++ examples, and a C-compiled API test. It supports in-memory handles and single-statement execution with typed result access; it uses the system allocator and does not yet support prepared statements, persistence, allocator injection, or storage injection. The POSIX file adapter and legacy snapshot compatibility implementation are separate CMake targets; the C and C++ in-memory examples link without them. `nm -u` found no direct POSIX I/O symbols in the core archive. Debug and Release each built and passed 16/16 CTest cases on 2026-11-01. Both examples ran successfully. The core still uses `std::mutex`, exceptions, and full STL facilities. This does not complete Stage 3 or establish any new platform target.
 
+Stage 4 has begun with `DiskManager::open(std::unique_ptr<File>, create)`, allowing a caller-provided random-access storage object without a path or filesystem. The memory-backed adapter test initializes a page file, allocates and writes a page, destroys the manager, reopens the same backing bytes, and validates the record. Debug and Release each pass 17/17 tests. This tests the page prototype only; SQL persistence still uses whole-file snapshots and raw flash is unsupported.
+
 ## Milestones
 
 | Milestone | State | Reproducible evidence |
