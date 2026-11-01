@@ -1,10 +1,10 @@
 # Portability and feature matrix
 
-Updated: 2026-10-31. `Verified` means a runnable target executed the listed tests. `Planned` is not support. Resource exhaustion must be explicit and must not alter SQL semantics. See [audit](PORTABILITY_AUDIT.md).
+Updated: 2026-11-01. `Verified` means a runnable target executed the listed tests. `Planned` is not support. Resource exhaustion must be explicit and must not alter SQL semantics. See [audit](PORTABILITY_AUDIT.md).
 
 | Target/profile | Build/runtime evidence | SQL and storage today | Memory/dependencies | Status |
 | --- | --- | --- | --- | --- |
-| Linux native C++ | Local GCC Debug 15/15 CTest targets on 2026-10-31; earlier CI Linux GCC/Clang jobs passed on older commit | Documented SQL subset and `HDBSNAP1` snapshots work; page path separate; no transaction recovery | Full C++20 STL, exceptions, heap, filesystem, POSIX; no measured peak | Partially verified |
+| Linux native C++ and C API | Local GCC Debug 16/16 CTest targets on 2026-11-01; earlier CI Linux GCC/Clang jobs passed on older commit | Documented SQL subset and `HDBSNAP1` snapshots work; page path separate; no transaction recovery. C API is in-memory and single-threaded per handle. | Full C++20 STL, exceptions, system heap, filesystem, POSIX; no measured peak or allocator injection | Partially verified |
 | macOS native C++ | Earlier CI built; CTest failed with unknown test | Same intended code path; behavior not fully verified | Full C++20 STL, exceptions, heap, POSIX-like services | Blocked by test failure |
 | Windows native | No build or run | POSIX file source is compiled unconditionally; CLI lock unavailable | Windows adapter absent | Unsupported |
 | Embedded Linux | No cross-build or device test | Linux-like adapter may be possible; no resource guarantee | Full runtime currently needed | Planned |

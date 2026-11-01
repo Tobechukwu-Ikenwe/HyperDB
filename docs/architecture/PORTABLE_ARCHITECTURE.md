@@ -1,6 +1,6 @@
 # Target portable architecture
 
-Status: design, not implemented. See [audit](PORTABILITY_AUDIT.md) and [ADR 0010](../decisions/0010-portable-core-contract.md).
+Status: target design; migration is in progress. The POSIX file target is split and an initial single-threaded in-memory C API exists; storage injection, prepared statements, bounded memory, transactions, and no-OS build are not implemented. See [audit](PORTABILITY_AUDIT.md) and [ADR 0010](../decisions/0010-portable-core-contract.md).
 
 ```mermaid
 flowchart TD
@@ -27,7 +27,7 @@ There is one semantic implementation. Build profiles select adapters and resourc
 | Transactions | Single-writer commit, rollback, replay, checkpoint, durability outcomes. | No current transaction manager; legacy snapshot save is a compatibility path until migration. |
 | Platform | Logical storage, memory, optional mutex, and only genuinely needed clock services. | Move `posix_file.cpp`, path opening, snapshot lock, and OS calls out of core target. |
 
-The C API target should support explicit initialization/shutdown, open/close, prepare/step/reset/finalize, typed column access, explicit begin/commit/rollback, status codes, and a versioned configuration structure. Each handle has documented lifetime and thread confinement. The C++ facade may use C++20 conveniences but must not redefine database behavior. A connection creation limit and statement memory limit are configurable. Existing direct C++ APIs remain available during migration, with deprecation only after equivalent behavior and snapshot compatibility are tested.
+The initial C API in `include/hyperdb/c_api.h` supports in-memory create/destroy, one-statement execution, typed result access, and status codes; it catches exceptions at the C boundary. It has no prepared statement, transaction, configuration, or allocator API yet. The C++ facade may use C++20 conveniences but must not redefine database behavior. Each handle is currently single-threaded. Existing direct C++ APIs remain available during migration, with deprecation only after equivalent behavior and snapshot compatibility are tested.
 
 ### Migration invariants
 
@@ -39,4 +39,4 @@ The C API target should support explicit initialization/shutdown, open/close, pr
 
 ### Acceptance path
 
-The first runnable slice is a Linux core plus POSIX adapter and memory fake with unchanged 15-test baseline. Next come allocation failure, C ABI, page-backed data, recovery, and cross-target gates. The current repo does not meet these invariants yet.
+The first runnable slices are the POSIX adapter build split and an initial C ABI, with Linux Debug regression suites passing. Next come storage injection, allocator failure tests, prepared statements, page-backed data, recovery, and cross-target gates. The current repo does not meet the final invariants yet.

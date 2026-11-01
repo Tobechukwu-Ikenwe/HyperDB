@@ -8,6 +8,8 @@ The optimization history was consolidated in `optimizatoons.md` on 2026-10-31. I
 
 The portability audit and target contracts were recorded in `docs/architecture/PORTABILITY_AUDIT.md` and related architecture documents. Stage 1 (audit) and Stage 2 (architecture) are complete. In Stage 3, `src/storage/posix_file.cpp` was moved out of `hyperdb_core` into `hyperdb_posix_file`; Debug and Release each built successfully and passed 15/15 CTest cases. This is only a partial build boundary: snapshot persistence still contains POSIX file calls, so the engine is not yet OS independent. README links now point to the audit and progress plan.
 
+Stage 3 now also has an initial opaque C API in `include/hyperdb/c_api.h`, C and C++ examples, and a C-compiled API test. It supports in-memory handles and single-statement execution with typed result access; it uses the system allocator and does not yet support prepared statements, persistence, allocator injection, or storage injection. Debug and Release each built and passed 16/16 CTest cases on 2026-11-01. Both examples ran successfully. This does not complete Stage 3 or establish any new platform target.
+
 ## Milestones
 
 | Milestone | State | Reproducible evidence |

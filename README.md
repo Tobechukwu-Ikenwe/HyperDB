@@ -31,6 +31,10 @@ The executable creates a three-row `Department` table for demonstration. Pass on
 
 The C++ API exposes `execute_statement`, `Database::save(path)`, and `Database::load(path)` for other tables. Snapshots include schemas, rows, equality-index definitions, and attached embeddings. UPDATE and DELETE rebuild equality indexes and remap surviving embeddings; each CLI write rewrites the full snapshot. The current format caps a file at 1 GiB, each table at 1 million rows and 512 columns, each text/blob field at 16 MiB, and vector dimensions at 100,000.
 
+An initial C embedding API is available in `include/hyperdb/c_api.h`. It supports single-threaded, in-memory database handles, one-statement execution, and typed result access; `hyperdb_c_example` demonstrates its use. It currently uses the system allocator and has no prepared-statement, custom-memory, storage-injection, or persistence API. Result string/blob pointers remain valid until their result handle is destroyed.
+
+`hyperdb_cpp_example` demonstrates direct use of the current C++ engine headers. Those headers are still implementation-facing and do not yet provide a stable C++ ABI.
+
 ## Local SQL workbench
 
 Run `cmake --build build -j 4`, then `python3 python/local_ui.py` and open `http://127.0.0.1:8765`. Enter a database name, enter one SQL statement, and run it. New databases are created on first use; HyperDB saves and reloads their state behind the interface. Results and errors appear as readable text. The UI runs locally without extra Python packages. The CLI's `--db-json` mode supplies typed results to the UI. Run `./build/hyperdb_workloads` in a terminal for the developer benchmark suite. Use `python3 tests/ui_smoke.py` while the server is running to check the UI API.

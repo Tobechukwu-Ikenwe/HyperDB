@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
-project(HyperDB LANGUAGES CXX)
+project(HyperDB LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -57,6 +57,10 @@ add_library(hyperdb_posix_file src/storage/posix_file.cpp)
 target_link_libraries(hyperdb_posix_file PUBLIC hyperdb_core)
 target_compile_options(hyperdb_posix_file PRIVATE -Wall -Wextra -Wpedantic -Werror)
 
+add_library(hyperdb_c_api src/bridge/c_api.cpp)
+target_link_libraries(hyperdb_c_api PUBLIC hyperdb_core)
+target_compile_options(hyperdb_c_api PRIVATE -Wall -Wextra -Wpedantic -Werror)
+
 add_executable(hyperdb src/main.cpp)
 target_link_libraries(hyperdb PRIVATE hyperdb_core)
 
@@ -71,6 +75,12 @@ target_link_libraries(hyperdb_vector_demo PRIVATE hyperdb_core)
 
 add_executable(hyperdb_bridge src/bridge/sqlite_bridge.cpp)
 target_link_libraries(hyperdb_bridge PRIVATE hyperdb_core)
+
+add_executable(hyperdb_c_example examples/c_api_example.c)
+target_link_libraries(hyperdb_c_example PRIVATE hyperdb_c_api)
+
+add_executable(hyperdb_cpp_example examples/cpp_embed.cpp)
+target_link_libraries(hyperdb_cpp_example PRIVATE hyperdb_core)
 
 if(HYPERDB_FUZZ)
     target_compile_options(hyperdb_core PRIVATE -fsanitize=fuzzer-no-link)
@@ -108,6 +118,9 @@ endif()
 add_executable(hyperdb_status_tests tests/status_tests.cpp)
 target_link_libraries(hyperdb_status_tests PRIVATE hyperdb_core)
 add_test(NAME hyperdb_status_tests COMMAND hyperdb_status_tests)
+add_executable(hyperdb_c_api_tests tests/c_api_tests.c)
+target_link_libraries(hyperdb_c_api_tests PRIVATE hyperdb_c_api)
+add_test(NAME hyperdb_c_api_tests COMMAND hyperdb_c_api_tests)
 add_executable(hyperdb_file_system_tests tests/file_system_tests.cpp)
 target_link_libraries(hyperdb_file_system_tests PRIVATE hyperdb_posix_file)
 add_test(NAME hyperdb_file_system_tests COMMAND hyperdb_file_system_tests)
