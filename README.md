@@ -2,6 +2,8 @@
 
 > **Engineering status:** The existing engine runs an in-memory SQL subset and saves whole-file snapshots. A disk-page engine is being built incrementally. See [current status](STATUS.md), [repository audit](docs/audit.md), and [limitations](docs/limitations.md) before relying on durability or concurrency behavior.
 
+The portability program is in progress. Its [repository audit](docs/architecture/PORTABILITY_AUDIT.md), [target architecture](docs/architecture/PORTABLE_ARCHITECTURE.md), and [implementation progress](docs/architecture/IMPLEMENTATION_PROGRESS.md) describe current limits and planned validation. Linux is the only target validated in this checkout; Windows, embedded, RTOS, and bare-metal support are not yet claimed.
+
 HyperDB is an educational C++ database engine with in-memory query execution, versioned file snapshots, and an experimental text-to-SQL Python demo. The C++ engine parses and executes a documented SQL subset, including `SELECT` and single-table writes. The storage API provides snapshots. It also has a B-tree equality index, exact cosine vector search over caller-supplied embeddings, and a local Python bridge that imports small read-only SQLite tables for C++ execution. The model demo can choose SQLite or HyperDB for generated SQL.
 
 ## Build and run the C++ engine
@@ -64,6 +66,9 @@ Run `./build/hyperdb_workloads` for a broader HyperDB suite covering parsing, sc
 
 - [Roadmap](docs/ROADMAP.md)
 - [Architecture](docs/ARCHITECTURE.md)
+- [Portability audit](docs/architecture/PORTABILITY_AUDIT.md)
+- [Portable architecture plan](docs/architecture/PORTABLE_ARCHITECTURE.md)
+- [Portability implementation progress](docs/architecture/IMPLEMENTATION_PROGRESS.md)
 - [Design decisions](docs/DESIGN_DECISIONS.md)
 - [Learning guide](docs/LEARNING_GUIDE.md)
 - [Development log](docs/DEVELOPMENT_LOG.md)

@@ -27,7 +27,6 @@ endif()
 add_library(hyperdb_core
     src/common/crc32c.cpp
     src/common/logging.cpp
-    src/storage/posix_file.cpp
     src/storage/fault_file.cpp
     src/storage/page_format.cpp
     src/storage/disk_manager.cpp
@@ -53,6 +52,10 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_G
     target_compile_options(hyperdb_core PRIVATE
         $<$<CONFIG:Release>:-Wno-free-nonheap-object>)
 endif()
+
+add_library(hyperdb_posix_file src/storage/posix_file.cpp)
+target_link_libraries(hyperdb_posix_file PUBLIC hyperdb_core)
+target_compile_options(hyperdb_posix_file PRIVATE -Wall -Wextra -Wpedantic -Werror)
 
 add_executable(hyperdb src/main.cpp)
 target_link_libraries(hyperdb PRIVATE hyperdb_core)
@@ -100,22 +103,22 @@ if(HYPERDB_FRAMEWORKS)
     add_test(NAME hyperdb_gtest COMMAND hyperdb_gtest)
 
     add_executable(hyperdb_file_io_benchmark benchmarks/file_io_benchmark.cpp)
-    target_link_libraries(hyperdb_file_io_benchmark PRIVATE hyperdb_core benchmark::benchmark_main)
+    target_link_libraries(hyperdb_file_io_benchmark PRIVATE hyperdb_posix_file benchmark::benchmark_main)
 endif()
 add_executable(hyperdb_status_tests tests/status_tests.cpp)
 target_link_libraries(hyperdb_status_tests PRIVATE hyperdb_core)
 add_test(NAME hyperdb_status_tests COMMAND hyperdb_status_tests)
 add_executable(hyperdb_file_system_tests tests/file_system_tests.cpp)
-target_link_libraries(hyperdb_file_system_tests PRIVATE hyperdb_core)
+target_link_libraries(hyperdb_file_system_tests PRIVATE hyperdb_posix_file)
 add_test(NAME hyperdb_file_system_tests COMMAND hyperdb_file_system_tests)
 add_executable(hyperdb_page_format_tests tests/page_format_tests.cpp)
 target_link_libraries(hyperdb_page_format_tests PRIVATE hyperdb_core)
 add_test(NAME hyperdb_page_format_tests COMMAND hyperdb_page_format_tests)
 add_executable(hyperdb_disk_manager_tests tests/disk_manager_tests.cpp)
-target_link_libraries(hyperdb_disk_manager_tests PRIVATE hyperdb_core)
+target_link_libraries(hyperdb_disk_manager_tests PRIVATE hyperdb_posix_file)
 add_test(NAME hyperdb_disk_manager_tests COMMAND hyperdb_disk_manager_tests)
 add_executable(hyperdb_buffer_pool_tests tests/buffer_pool_tests.cpp)
-target_link_libraries(hyperdb_buffer_pool_tests PRIVATE hyperdb_core)
+target_link_libraries(hyperdb_buffer_pool_tests PRIVATE hyperdb_posix_file)
 add_test(NAME hyperdb_buffer_pool_tests COMMAND hyperdb_buffer_pool_tests)
 add_executable(hyperdb_tests tests/database_tests.cpp)
 target_link_libraries(hyperdb_tests PRIVATE hyperdb_core)
