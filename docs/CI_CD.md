@@ -6,7 +6,7 @@ The workflow definitions in `.github/workflows/` are the validation architecture
 
 | Workflow | Pull request | Push to `main` | Nightly/manual | Release tag | Coverage |
 | --- | --- | --- | --- | --- | --- |
-| `ci.yml` | Unit and SQL regression tests with GCC and Clang; formatting and clang-tidy; 85% line coverage floor; framework tests; calls the integration workflow | Same | — | — | Required PR checks after repository branch protection is configured |
+| `ci.yml` | Unit and SQL regression tests with GCC and Clang; formatting and clang-tidy; 85% line coverage floor; framework tests; calls the integration workflow | Same | — | — | Required PR checks configured on `main` |
 | `integration-tests.yml` | Called by CI | Called by CI | Reusable workflow only | — | C API, snapshot, bridge, storage, fault-injection cases, and CLI concurrency |
 | `portability.yml` | Linux no-mutex, Windows core-only, AArch64 cross-compile | Same | — | — | Windows core build and tests; AArch64 compile only; no hardware claims |
 | `sanitizers.yml` | ASan, UBSan, and TSan full suites | Same | — | — | Correctness under supported desktop sanitizers |
@@ -19,21 +19,21 @@ The current CTest labels are `unit`, `integration`, `storage`, `regression`, and
 
 ## Required repository settings
 
-GitHub does not allow a workflow file to make its own check required. A repository administrator must enable branch protection or a ruleset for `main` and require these check contexts:
+GitHub does not allow a workflow file to make its own check required. Strict branch protection was enabled on `main` on 2026-11-01, including administrators. It requires these contexts:
 
 - `unit and SQL regression (gcc)`
 - `unit and SQL regression (clang)`
 - `formatting and static analysis`
 - `coverage gate`
 - `pinned test and benchmark frameworks`
-- `integration and storage tests`
+- `integration and storage tests / storage failures, integration, and concurrency`
 - `Linux single-threaded profile`
 - `Windows shared core without POSIX or snapshot targets`
 - `AArch64 embedded-Linux core cross-compilation`
 - `asan`, `ubsan`, and `tsan`
 - `parser fuzz smoke`
 
-The `release` workflow also requires a GitHub environment named `release` with at least one required reviewer. Configure that protection in repository settings. The release job has `contents: write`; all other workflows have read-only contents permission.
+The `release` environment was created with the repository owner as its required reviewer and administrator bypass disabled. The release job has `contents: write`; all other workflows have read-only contents permission. A release tag was not created, so the gated publication job has not been exercised.
 
 ## Benchmark policy
 
@@ -45,8 +45,10 @@ The `release` workflow also requires a GitHub environment named `release` with a
 
 The Windows job builds and executes only shared-core, C API, and injected-memory-page tests. It does not build the POSIX CLI or claim Windows snapshot semantics. The AArch64 job compiles `hyperdb_core` and does not execute the result. The no-mutex profile is tested on Linux, but no RTOS adapter, bare-metal build, physical flash device, or hardware power-cut test exists. The nightly job reports missing checks explicitly rather than silently skipping or claiming them.
 
-## Existing run investigation and operational status
+## Run verification and operational status
+
+Commit `765eae9ea5163e65124361282bbf8de089764371` was pushed to `main` and all four triggered workflows passed on 2026-11-01: [CI](https://github.com/Tobechukwu-Ikenwe/HyperDB/actions/runs/41296112097), [Sanitizers](https://github.com/Tobechukwu-Ikenwe/HyperDB/actions/runs/41296112000), [Portability](https://github.com/Tobechukwu-Ikenwe/HyperDB/actions/runs/41296112034), and [Benchmarks](https://github.com/Tobechukwu-Ikenwe/HyperDB/actions/runs/41296112027). CI passed both compiler jobs, formatting/static analysis, the 85% coverage gate, framework checks, and integration/storage tests. ASan, UBSan, and TSan passed. Windows shared-core tests and AArch64 core cross-compilation passed; AArch64 was compile-only. The paired benchmark gate and artifact upload passed. Nightly scheduled workloads, PR-triggered fuzz smoke, and release publication have not yet run on this revision.
 
 Historical GitHub run [40803141644](https://github.com/Tobechukwu-Ikenwe/HyperDB/actions/runs/40803141644) had a successful Linux GCC/Clang build, release job, sanitizers, coverage, and style job. The macOS test step failed after its build succeeded. GitHub's current job metadata identifies the failed step as `Test` but the log endpoint returned no test output, so the specific failing CTest remains unidentified. This workflow set replaces the macOS job with the explicitly required Windows and AArch64 configurations.
 
-Workflow YAML is locally syntax-checked before commit. A workflow is not called operational until the new revision has run on GitHub and all required jobs pass. Branch protection and the release environment are repository settings and must be verified separately.
+Workflow YAML was syntax-checked locally and the four push workflows above have passed on GitHub. The future PR-only fuzz smoke and gated release publication remain unexecuted; nightly scenarios are likewise pending their schedule or manual dispatch.
