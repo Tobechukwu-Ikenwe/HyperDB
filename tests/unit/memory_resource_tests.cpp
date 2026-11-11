@@ -1,4 +1,5 @@
 #include "hyperdb/memory.h"
+#include <gtest/gtest.h>
 
 #include <cassert>
 #include <cstddef>
@@ -44,20 +45,20 @@ void misaligned_deallocate(void *context, void *, std::size_t, std::size_t) noex
 }
 } // namespace
 
-int main() {
+TEST(MemoryResourceTests, ExistingCases) {
     {
         hyperdb::MemoryResource resource;
         void *pointer = resource.allocate(48, 128);
-        assert(reinterpret_cast<std::uintptr_t>(pointer) % 128 == 0);
+        EXPECT_TRUE(reinterpret_cast<std::uintptr_t>(pointer) % 128 == 0);
         auto stats = resource.stats();
-        assert(stats.current_bytes == 48);
-        assert(stats.peak_bytes == 48);
-        assert(stats.allocation_count == 1);
-        assert(!stats.remaining_budget);
+        EXPECT_TRUE(stats.current_bytes == 48);
+        EXPECT_TRUE(stats.peak_bytes == 48);
+        EXPECT_TRUE(stats.allocation_count == 1);
+        EXPECT_TRUE(!stats.remaining_budget);
         resource.deallocate(pointer, 48, 128);
         stats = resource.stats();
-        assert(stats.current_bytes == 0);
-        assert(stats.deallocation_count == 1);
+        EXPECT_TRUE(stats.current_bytes == 0);
+        EXPECT_TRUE(stats.deallocation_count == 1);
     }
 
     {
@@ -72,27 +73,27 @@ int main() {
 
         void *first = resource.allocate(64, 64);
         void *second = resource.allocate(32, alignof(std::max_align_t));
-        assert(reinterpret_cast<std::uintptr_t>(first) % 64 == 0);
-        assert(resource.stats().remaining_budget == 0);
+        EXPECT_TRUE(reinterpret_cast<std::uintptr_t>(first) % 64 == 0);
+        EXPECT_TRUE(resource.stats().remaining_budget == 0);
         bool exhausted = false;
         try {
             (void)resource.allocate(1, alignof(std::max_align_t));
         } catch (const std::bad_alloc &) {
             exhausted = true;
         }
-        assert(exhausted);
+        EXPECT_TRUE(exhausted);
         auto stats = resource.stats();
-        assert(stats.current_bytes == 96);
-        assert(stats.peak_bytes == 96);
-        assert(stats.allocation_count == 2);
-        assert(stats.failure_count == 1);
+        EXPECT_TRUE(stats.current_bytes == 96);
+        EXPECT_TRUE(stats.peak_bytes == 96);
+        EXPECT_TRUE(stats.allocation_count == 2);
+        EXPECT_TRUE(stats.failure_count == 1);
         resource.deallocate(second, 32, alignof(std::max_align_t));
         resource.deallocate(first, 64, 64);
         stats = resource.stats();
-        assert(stats.current_bytes == 0);
-        assert(stats.deallocation_count == 2);
-        assert(ledger.allocations == 2);
-        assert(ledger.deallocations == 2);
+        EXPECT_TRUE(stats.current_bytes == 0);
+        EXPECT_TRUE(stats.deallocation_count == 2);
+        EXPECT_TRUE(ledger.allocations == 2);
+        EXPECT_TRUE(ledger.deallocations == 2);
     }
 
     {
@@ -105,8 +106,8 @@ int main() {
         hyperdb::MemoryResource left(config);
         hyperdb::MemoryResource right(config);
         void *pointer = left.allocate(16, alignof(std::max_align_t));
-        assert(left.stats().current_bytes == 16);
-        assert(right.stats().current_bytes == 0);
+        EXPECT_TRUE(left.stats().current_bytes == 16);
+        EXPECT_TRUE(right.stats().current_bytes == 0);
         left.deallocate(pointer, 16, alignof(std::max_align_t));
     }
 
@@ -124,10 +125,10 @@ int main() {
         } catch (const std::bad_alloc &) {
             rejected = true;
         }
-        assert(rejected);
-        assert(resource.stats().current_bytes == 0);
-        assert(resource.stats().failure_count == 1);
-        assert(ledger.deallocations == 1);
+        EXPECT_TRUE(rejected);
+        EXPECT_TRUE(resource.stats().current_bytes == 0);
+        EXPECT_TRUE(resource.stats().failure_count == 1);
+        EXPECT_TRUE(ledger.deallocations == 1);
     }
 
     if (hyperdb::MemoryResource::hypermalloc_available()) {
@@ -136,9 +137,9 @@ int main() {
         config.budget_bytes = 128;
         hyperdb::MemoryResource resource(config);
         void *pointer = resource.allocate(96, 64);
-        assert(reinterpret_cast<std::uintptr_t>(pointer) % 64 == 0);
-        assert(resource.stats().current_bytes == 96);
+        EXPECT_TRUE(reinterpret_cast<std::uintptr_t>(pointer) % 64 == 0);
+        EXPECT_TRUE(resource.stats().current_bytes == 96);
         resource.deallocate(pointer, 96, 64);
-        assert(resource.stats().current_bytes == 0);
+        EXPECT_TRUE(resource.stats().current_bytes == 0);
     }
 }

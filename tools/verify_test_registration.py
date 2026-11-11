@@ -14,7 +14,11 @@ def main() -> int:
 
     data = json.loads(args.inventory.read_text(encoding="utf-8"))
     registered = {test["name"] for test in data.get("tests", [])}
-    missing = sorted(set(args.required) - registered)
+    missing = sorted(
+        required
+        for required in args.required
+        if not any(name == required or name.startswith(required + "/") for name in registered)
+    )
     if missing:
         parser.error("CTest did not register required tests: " + ", ".join(missing))
     print("Required CTest entries registered: " + ", ".join(args.required))

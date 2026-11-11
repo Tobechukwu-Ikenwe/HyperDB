@@ -41,7 +41,7 @@ jobs:
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
       - name: Configure core-only profile
-        run: cmake -S . -B build/core-only -G Ninja -DCMAKE_BUILD_TYPE=Debug -DHYPERDB_SINGLE_THREADED=ON
+        run: cmake -S . -B build/core-only -G Ninja -DCMAKE_BUILD_TYPE=Debug -DHYPERDB_SINGLE_THREADED=ON -DHYPERDB_BUILD_BENCHMARKS=OFF
       - name: Build portable core, C API, and injected-storage tests
         run: >-
           cmake --build build/core-only --parallel 4 --target
@@ -67,6 +67,8 @@ jobs:
           -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc
           -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++
           -DHYPERDB_SINGLE_THREADED=ON
+          -DHYPERDB_BUILD_TESTS=OFF
+          -DHYPERDB_BUILD_BENCHMARKS=OFF
       - name: Compile shared core only
         run: cmake --build build/aarch64 --parallel 4 --target hyperdb_core
       - name: Report validation boundary

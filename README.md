@@ -8,7 +8,7 @@ HyperDB is an educational C++ database engine with in-memory query execution, ve
 
 ## Build and run the C++ engine
 
-Requires a C++20 compiler and CMake 3.25 or newer.
+Requires a C++20 compiler and CMake 3.25 or newer. The default build fetches pinned GoogleTest and Google Benchmark packages for the test and benchmark targets. Use `-DHYPERDB_BUILD_TESTS=OFF -DHYPERDB_BUILD_BENCHMARKS=OFF` for a core-only build without those packages.
 
 ```sh
 cmake -S . -B build
@@ -60,11 +60,11 @@ Build a Release configuration and run the same deterministic equality workload i
 ```sh
 cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release
 cmake --build build-release -j 4
-./build-release/hyperdb_benchmark 100000 200
+./build-release/hyperdb_benchmark --benchmark_repetitions=7 --benchmark_filter='BM_Equality.*100000' --benchmark_out=equality.json --benchmark_out_format=json
 python3 benchmarks/baselines/sqlite_baseline.py 100000 200
 ```
 
-These report elapsed milliseconds for repeated scan and indexed lookups. Python/SQLite uses cached prepared statements while HyperDB parses each query, and setup time is excluded. Treat results as workload-specific measurements, not a general engine ranking.
+Google Benchmark reports repeated scan and indexed lookup measurements in JSON. Python/SQLite uses cached prepared statements while HyperDB parses each query, and setup time is excluded. Treat results as workload-specific measurements, not a general engine ranking.
 
 Run `./build/hyperdb_workloads` for a broader HyperDB suite covering parsing, scans, sorting, grouping, index construction and lookup, joins, vector search, writes, and snapshot I/O. See [benchmark notes](docs/BENCHMARKS.md) for measurements and the executor changes they motivated.
 

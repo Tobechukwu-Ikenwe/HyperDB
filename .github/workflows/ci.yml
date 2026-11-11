@@ -58,7 +58,7 @@ jobs:
           tests/unit/memory_resource_tests.cpp tests/unit/allocator_backend_tests.cpp
           tests/storage/page_format_tests.cpp tests/storage/disk_manager_tests.cpp
           tests/storage/device_storage_tests.cpp tests/storage/buffer_pool_tests.cpp
-          tests/integration/statement_tests.cpp tests/integration/c_api_tests.c
+          tests/integration/statement_tests.cpp tests/integration/c_api_tests.cpp
           benchmarks/workloads/file_io_benchmark.cpp
       - name: Configure compilation database
         run: cmake --preset debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
@@ -91,12 +91,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
-      - name: Configure framework targets
-        run: cmake --preset framework
-      - name: Build and run framework tests
+      - name: Configure universal test and benchmark targets
+        run: cmake --preset debug
+      - name: Build and run GoogleTest suite
         run: |
-          cmake --build --preset framework --parallel 4
-          ctest --preset framework --output-on-failure
+          cmake --build --preset debug --parallel 4
+          ctest --preset debug --output-on-failure -L unit
+          ./build/debug/hyperdb_workloads --benchmark_min_time=0.01s --benchmark_filter=BM_ParseSelect
 
   integration:
     name: integration and storage tests

@@ -1,6 +1,6 @@
 # ADR 0004: Pinned test and benchmark frameworks
 
-Status: accepted, 2026-10-28.
+Status: superseded by [ADR 0017](0017-google-test-and-benchmark.md), 2026-11-11.
 
 ## Context
 

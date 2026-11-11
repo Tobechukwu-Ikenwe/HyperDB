@@ -2,6 +2,21 @@
 
 Updated: 2026-11-01. Baseline commit: `367d3e8`. Foundation and file I/O boundary: `19c998a`.
 
+Testing and benchmark framework update (2026-11-11): all C++ test executables
+now register GoogleTest cases through CTest discovery; test expectations remain
+active in Release. The C API behavior test is compiled as C++ against the C
+header, while the C example still validates C compilation. All C++ workload
+benchmarks use pinned Google Benchmark v1.9.4 and emit JSON. The hand-timed
+parent benchmark output is not comparable to this new format, so CI currently
+records seven Google Benchmark repetitions without a regression gate pending a
+reviewed baseline. Pinned GoogleTest v1.17.0 and Google Benchmark v1.9.4 are
+enabled by default through FetchContent and can both be disabled for core-only
+cross builds. Debug and Release each pass 22/22 CTest cases locally; the
+Google Benchmark smoke ran all 14 SQL workload registrations and produced JSON.
+The same-binary benchmark comparison utility also parsed repeated JSON samples.
+GitHub workflows have not yet run on this migration; the allocator branch is
+pushed, but PR creation is blocked by the connected GitHub API's 403.
+
 Allocator milestone update (2026-11-01): inspected HyperMalloc at pinned commit
 `3258efd0742351a1045d51442ab5d10bee3d578c`; its standalone suite passed 13/13
 tests. Added a HyperDB PMR adapter for system, application callback, and

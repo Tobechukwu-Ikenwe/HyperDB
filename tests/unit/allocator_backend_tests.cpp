@@ -1,5 +1,6 @@
 #include "QueryExecutor/query_executor.h"
 #include "hyperdb/memory.h"
+#include <gtest/gtest.h>
 
 #include <cassert>
 #include <cstddef>
@@ -44,29 +45,29 @@ void verify_sql_workload(hyperdb::AllocatorConfig config, Ledger *ledger) {
         Database database{config};
         auto created =
             execute_statement(database, "CREATE TABLE people (id INTEGER NOT NULL, name TEXT)");
-        assert(created.modified);
-        assert(database.allocator_stats().allocation_count > 0);
-        assert(execute_statement(database, "INSERT INTO people VALUES (1, 'Ada')").modified);
-        assert(execute_statement(database, "INSERT INTO people VALUES (2, 'Grace')").modified);
+        EXPECT_TRUE(created.modified);
+        EXPECT_TRUE(database.allocator_stats().allocation_count > 0);
+        EXPECT_TRUE(execute_statement(database, "INSERT INTO people VALUES (1, 'Ada')").modified);
+        EXPECT_TRUE(execute_statement(database, "INSERT INTO people VALUES (2, 'Grace')").modified);
         const auto before_index = database.allocator_stats().allocation_count;
-        assert(database.create_index("people", "id"));
-        assert(database.allocator_stats().allocation_count > before_index);
+        EXPECT_TRUE(database.create_index("people", "id"));
+        EXPECT_TRUE(database.allocator_stats().allocation_count > before_index);
         auto selected = execute_statement(database, "SELECT name FROM people WHERE id = 2");
-        assert(selected.query.rows.size() == 1);
-        assert(std::get<std::string>(selected.query.rows[0][0]) == "Grace");
+        EXPECT_TRUE(selected.query.rows.size() == 1);
+        EXPECT_TRUE(std::get<std::string>(selected.query.rows[0][0]) == "Grace");
         auto stats = database.allocator_stats();
-        assert(stats.current_bytes > 0);
-        assert(stats.allocation_count >= 2);
-        assert(stats.failure_count == 0);
+        EXPECT_TRUE(stats.current_bytes > 0);
+        EXPECT_TRUE(stats.allocation_count >= 2);
+        EXPECT_TRUE(stats.failure_count == 0);
     }
     if (ledger) {
-        assert(ledger->allocations > 0);
-        assert(ledger->allocations == ledger->deallocations);
+        EXPECT_TRUE(ledger->allocations > 0);
+        EXPECT_TRUE(ledger->allocations == ledger->deallocations);
     }
 }
 } // namespace
 
-int main() {
+TEST(AllocatorBackendTests, ExistingCases) {
     verify_sql_workload({}, nullptr);
 
     Ledger application_ledger;
@@ -79,12 +80,12 @@ int main() {
     {
         Database first{application};
         Database second{application};
-        assert(execute_statement(first, "CREATE TABLE first_table (id INTEGER)").modified);
-        assert(execute_statement(second, "CREATE TABLE second_table (id INTEGER)").modified);
-        assert(first.allocator_stats().current_bytes > 0);
-        assert(second.allocator_stats().current_bytes > 0);
+        EXPECT_TRUE(execute_statement(first, "CREATE TABLE first_table (id INTEGER)").modified);
+        EXPECT_TRUE(execute_statement(second, "CREATE TABLE second_table (id INTEGER)").modified);
+        EXPECT_TRUE(first.allocator_stats().current_bytes > 0);
+        EXPECT_TRUE(second.allocator_stats().current_bytes > 0);
     }
-    assert(application_ledger.allocations == application_ledger.deallocations);
+    EXPECT_TRUE(application_ledger.allocations == application_ledger.deallocations);
 
     if (hyperdb::MemoryResource::hypermalloc_available()) {
         hyperdb::AllocatorConfig hypermalloc;
@@ -101,9 +102,9 @@ int main() {
     } catch (const std::bad_alloc &) {
         failed = true;
     }
-    assert(failed);
-    assert(database.table_count() == 0);
+    EXPECT_TRUE(failed);
+    EXPECT_TRUE(database.table_count() == 0);
     const auto failure_stats = database.allocator_stats();
-    assert(failure_stats.current_bytes == 0);
-    assert(failure_stats.failure_count == 1);
+    EXPECT_TRUE(failure_stats.current_bytes == 0);
+    EXPECT_TRUE(failure_stats.failure_count == 1);
 }

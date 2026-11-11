@@ -1,8 +1,6 @@
 #include "storage/buffer_pool.h"
+#include <gtest/gtest.h>
 
-#ifdef NDEBUG
-#undef NDEBUG
-#endif
 #include <array>
 #include <cassert>
 #include <chrono>
@@ -27,42 +25,42 @@ class TestWal final : public hyperdb::WalDurability {
 
 } // namespace
 
-int main() {
+TEST(BufferPoolTests, ExistingCases) {
     using namespace hyperdb;
     const auto path = std::filesystem::temp_directory_path() /
                       ("hyperdb-buffer-pool-test-" +
                        std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
     auto fs = make_posix_file_system();
     auto opened = DiskManager::open(*fs, path, true);
-    assert(opened.ok());
+    EXPECT_TRUE(opened.ok());
     auto disk = std::move(opened).value();
-    assert(disk->allocate_slotted_page().value() == 1);
-    assert(disk->allocate_slotted_page().value() == 2);
+    EXPECT_TRUE(disk->allocate_slotted_page().value() == 1);
+    EXPECT_TRUE(disk->allocate_slotted_page().value() == 2);
     TestWal wal;
-    assert(BufferPool::create(*disk, wal, 0).status().code() == ErrorCode::invalid_argument);
+    EXPECT_TRUE(BufferPool::create(*disk, wal, 0).status().code() == ErrorCode::invalid_argument);
     auto created = BufferPool::create(*disk, wal, 1);
-    assert(created.ok());
+    EXPECT_TRUE(created.ok());
     auto pool = std::move(created).value();
-    assert(pool->read(0).status().code() == ErrorCode::invalid_argument);
+    EXPECT_TRUE(pool->read(0).status().code() == ErrorCode::invalid_argument);
     auto first = pool->read(1).value();
     const std::array<std::byte, 2> record{std::byte{0xaa}, std::byte{0xbb}};
-    assert(insert_record(first, record, 7).ok());
-    assert(pool->write(1, first).ok());
-    assert(pool->read(1).value() == first);
+    EXPECT_TRUE(insert_record(first, record, 7).ok());
+    EXPECT_TRUE(pool->write(1, first).ok());
+    EXPECT_TRUE(pool->read(1).value() == first);
     wal.fail = true;
-    assert(pool->read(2).status().code() == ErrorCode::io_error);
-    assert(wal.calls.size() == 1 && wal.calls[0] == 7);
-    assert(disk->read_page(1).value() != first);
+    EXPECT_TRUE(pool->read(2).status().code() == ErrorCode::io_error);
+    EXPECT_TRUE(wal.calls.size() == 1 && wal.calls[0] == 7);
+    EXPECT_TRUE(disk->read_page(1).value() != first);
     wal.fail = false;
-    assert(pool->read(2).ok());
-    assert(disk->read_page(1).value() == first);
-    assert(pool->flush_all().ok());
+    EXPECT_TRUE(pool->read(2).ok());
+    EXPECT_TRUE(disk->read_page(1).value() == first);
+    EXPECT_TRUE(pool->flush_all().ok());
     pool.reset();
     disk.reset();
     opened = DiskManager::open(*fs, path, false);
-    assert(opened.ok());
+    EXPECT_TRUE(opened.ok());
     disk = std::move(opened).value();
-    assert(disk->read_page(1).value() == first);
+    EXPECT_TRUE(disk->read_page(1).value() == first);
     disk.reset();
     std::filesystem::remove(path);
 }

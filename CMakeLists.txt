@@ -8,7 +8,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(HYPERDB_SANITIZER "" CACHE STRING "Sanitizer: address, undefined, or thread")
 option(HYPERDB_COVERAGE "Enable GCC/Clang coverage instrumentation" OFF)
 option(HYPERDB_FUZZ "Enable fuzz development build" OFF)
-option(HYPERDB_FRAMEWORKS "Build pinned GoogleTest and Google Benchmark targets" OFF)
+option(HYPERDB_BUILD_TESTS "Build GoogleTest suites and Python integration tests" ON)
+option(HYPERDB_BUILD_BENCHMARKS "Build Google Benchmark workloads" ON)
 option(HYPERDB_SINGLE_THREADED "Build the core for single-threaded access without mutexes" OFF)
 option(HYPERDB_ENABLE_HYPERMALLOC "Enable the optional HyperMalloc memory backend" OFF)
 
@@ -93,12 +94,6 @@ hyperdb_strict_warnings(hyperdb_c_api)
 add_executable(hyperdb src/main.cpp)
 target_link_libraries(hyperdb PRIVATE hyperdb_snapshot_compat)
 
-add_executable(hyperdb_benchmark benchmarks/workloads/equality_benchmark.cpp)
-target_link_libraries(hyperdb_benchmark PRIVATE hyperdb_core)
-
-add_executable(hyperdb_workloads benchmarks/workloads/workloads.cpp)
-target_link_libraries(hyperdb_workloads PRIVATE hyperdb_snapshot_compat)
-
 add_executable(hyperdb_vector_demo examples/vector_search.cpp)
 target_link_libraries(hyperdb_vector_demo PRIVATE hyperdb_core)
 
@@ -121,119 +116,86 @@ if(HYPERDB_FUZZ)
          DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/corpus)
 endif()
 
-enable_testing()
-if(HYPERDB_FRAMEWORKS)
-    include(FetchContent)
+include(FetchContent)
+if(HYPERDB_BUILD_TESTS)
     set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
     FetchContent_Declare(googletest
         GIT_REPOSITORY https://github.com/google/googletest.git
         GIT_TAG v1.17.0
         GIT_SHALLOW TRUE)
+    FetchContent_MakeAvailable(googletest)
+endif()
+if(HYPERDB_BUILD_BENCHMARKS)
     set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
     set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "" FORCE)
     FetchContent_Declare(googlebenchmark
         GIT_REPOSITORY https://github.com/google/benchmark.git
         GIT_TAG v1.9.4
         GIT_SHALLOW TRUE)
-    FetchContent_MakeAvailable(googletest googlebenchmark)
+    FetchContent_MakeAvailable(googlebenchmark)
+endif()
 
-    add_executable(hyperdb_gtest tests/unit/status_gtest.cpp)
-    target_link_libraries(hyperdb_gtest PRIVATE hyperdb_core GTest::gtest_main)
-    add_test(NAME hyperdb_gtest COMMAND hyperdb_gtest)
+enable_testing()
+if(HYPERDB_BUILD_TESTS)
+    include(GoogleTest)
+    function(hyperdb_add_gtest target source library label)
+        add_executable(${target} ${source} ${ARGN})
+        target_link_libraries(${target} PRIVATE ${library} GTest::gtest_main)
+        gtest_discover_tests(${target}
+            TEST_PREFIX "${target}/"
+            PROPERTIES LABELS "${label}")
+    endfunction()
 
+    hyperdb_add_gtest(hyperdb_status_tests tests/unit/status_tests.cpp hyperdb_core unit
+    tests/unit/status_gtest.cpp)
+    hyperdb_add_gtest(hyperdb_memory_resource_tests tests/unit/memory_resource_tests.cpp hyperdb_core unit)
+    hyperdb_add_gtest(hyperdb_allocator_backend_tests tests/unit/allocator_backend_tests.cpp hyperdb_snapshot_compat unit)
+    hyperdb_add_gtest(hyperdb_c_api_tests tests/integration/c_api_tests.cpp hyperdb_c_api integration)
+    hyperdb_add_gtest(hyperdb_file_system_tests tests/storage/file_system_tests.cpp hyperdb_posix_file storage)
+    hyperdb_add_gtest(hyperdb_page_format_tests tests/storage/page_format_tests.cpp hyperdb_core storage)
+    hyperdb_add_gtest(hyperdb_disk_manager_tests tests/storage/disk_manager_tests.cpp hyperdb_posix_file storage)
+    hyperdb_add_gtest(hyperdb_device_storage_tests tests/storage/device_storage_tests.cpp hyperdb_core storage)
+    hyperdb_add_gtest(hyperdb_buffer_pool_tests tests/storage/buffer_pool_tests.cpp hyperdb_posix_file storage)
+    hyperdb_add_gtest(hyperdb_tests tests/unit/database_tests.cpp hyperdb_core unit)
+    hyperdb_add_gtest(hyperdb_lexer_tests tests/unit/lexer_tests.cpp hyperdb_core unit)
+    hyperdb_add_gtest(hyperdb_parser_tests tests/unit/parser_tests.cpp hyperdb_core unit)
+    hyperdb_add_gtest(hyperdb_index_tests tests/unit/index_tests.cpp hyperdb_core unit)
+    hyperdb_add_gtest(hyperdb_vector_tests tests/unit/vector_tests.cpp hyperdb_core unit)
+    hyperdb_add_gtest(hyperdb_persistence_tests tests/integration/persistence_tests.cpp hyperdb_snapshot_compat integration)
+    hyperdb_add_gtest(hyperdb_statement_tests tests/integration/statement_tests.cpp hyperdb_snapshot_compat integration)
+
+    find_package(Python3 COMPONENTS Interpreter QUIET)
+    if(Python3_Interpreter_FOUND)
+        add_test(NAME hyperdb_bridge_tests
+            COMMAND ${CMAKE_COMMAND} -E env HYPERDB_BRIDGE_BIN=$<TARGET_FILE:hyperdb_bridge>
+                    ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/integration/bridge_tests.py)
+    endif()
+
+    if(UNIX AND Python3_Interpreter_FOUND)
+        add_test(NAME hyperdb_cli_concurrency_tests
+            COMMAND ${CMAKE_COMMAND} -E env HYPERDB_CLI_BIN=$<TARGET_FILE:hyperdb>
+                    ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/regression/cli_concurrency_tests.py)
+        add_test(NAME hyperdb_sqlite_conformance_tests
+            COMMAND ${CMAKE_COMMAND} -E env HYPERDB_CLI_BIN=$<TARGET_FILE:hyperdb>
+                    ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/regression/sqlite_conformance.py)
+    endif()
+
+    if(TEST hyperdb_bridge_tests)
+        set_tests_properties(hyperdb_bridge_tests PROPERTIES LABELS "integration")
+    endif()
+    if(TEST hyperdb_cli_concurrency_tests)
+        set_tests_properties(hyperdb_cli_concurrency_tests PROPERTIES LABELS "regression;concurrency")
+    endif()
+    if(TEST hyperdb_sqlite_conformance_tests)
+        set_tests_properties(hyperdb_sqlite_conformance_tests PROPERTIES LABELS "regression")
+    endif()
+endif()
+
+if(HYPERDB_BUILD_BENCHMARKS)
+    add_executable(hyperdb_benchmark benchmarks/workloads/equality_benchmark.cpp)
+    target_link_libraries(hyperdb_benchmark PRIVATE hyperdb_core benchmark::benchmark_main)
+    add_executable(hyperdb_workloads benchmarks/workloads/workloads.cpp)
+    target_link_libraries(hyperdb_workloads PRIVATE hyperdb_snapshot_compat benchmark::benchmark_main)
     add_executable(hyperdb_file_io_benchmark benchmarks/workloads/file_io_benchmark.cpp)
     target_link_libraries(hyperdb_file_io_benchmark PRIVATE hyperdb_posix_file benchmark::benchmark_main)
-endif()
-add_executable(hyperdb_status_tests tests/unit/status_tests.cpp)
-target_link_libraries(hyperdb_status_tests PRIVATE hyperdb_core)
-add_test(NAME hyperdb_status_tests COMMAND hyperdb_status_tests)
-add_executable(hyperdb_memory_resource_tests tests/unit/memory_resource_tests.cpp)
-target_link_libraries(hyperdb_memory_resource_tests PRIVATE hyperdb_core)
-add_test(NAME hyperdb_memory_resource_tests COMMAND hyperdb_memory_resource_tests)
-add_executable(hyperdb_allocator_backend_tests tests/unit/allocator_backend_tests.cpp)
-target_link_libraries(hyperdb_allocator_backend_tests PRIVATE hyperdb_snapshot_compat)
-add_test(NAME hyperdb_allocator_backend_tests COMMAND hyperdb_allocator_backend_tests)
-add_executable(hyperdb_c_api_tests tests/integration/c_api_tests.c)
-target_link_libraries(hyperdb_c_api_tests PRIVATE hyperdb_c_api)
-add_test(NAME hyperdb_c_api_tests COMMAND hyperdb_c_api_tests)
-add_executable(hyperdb_file_system_tests tests/storage/file_system_tests.cpp)
-target_link_libraries(hyperdb_file_system_tests PRIVATE hyperdb_posix_file)
-add_test(NAME hyperdb_file_system_tests COMMAND hyperdb_file_system_tests)
-add_executable(hyperdb_page_format_tests tests/storage/page_format_tests.cpp)
-target_link_libraries(hyperdb_page_format_tests PRIVATE hyperdb_core)
-add_test(NAME hyperdb_page_format_tests COMMAND hyperdb_page_format_tests)
-add_executable(hyperdb_disk_manager_tests tests/storage/disk_manager_tests.cpp)
-target_link_libraries(hyperdb_disk_manager_tests PRIVATE hyperdb_posix_file)
-add_test(NAME hyperdb_disk_manager_tests COMMAND hyperdb_disk_manager_tests)
-add_executable(hyperdb_device_storage_tests tests/storage/device_storage_tests.cpp)
-target_link_libraries(hyperdb_device_storage_tests PRIVATE hyperdb_core)
-add_test(NAME hyperdb_device_storage_tests COMMAND hyperdb_device_storage_tests)
-add_executable(hyperdb_buffer_pool_tests tests/storage/buffer_pool_tests.cpp)
-target_link_libraries(hyperdb_buffer_pool_tests PRIVATE hyperdb_posix_file)
-add_test(NAME hyperdb_buffer_pool_tests COMMAND hyperdb_buffer_pool_tests)
-add_executable(hyperdb_tests tests/unit/database_tests.cpp)
-target_link_libraries(hyperdb_tests PRIVATE hyperdb_core)
-add_test(NAME hyperdb_tests COMMAND hyperdb_tests)
-
-add_executable(hyperdb_lexer_tests tests/unit/lexer_tests.cpp)
-target_link_libraries(hyperdb_lexer_tests PRIVATE hyperdb_core)
-add_test(NAME hyperdb_lexer_tests COMMAND hyperdb_lexer_tests)
-
-add_executable(hyperdb_parser_tests tests/unit/parser_tests.cpp)
-target_link_libraries(hyperdb_parser_tests PRIVATE hyperdb_core)
-add_test(NAME hyperdb_parser_tests COMMAND hyperdb_parser_tests)
-
-add_executable(hyperdb_index_tests tests/unit/index_tests.cpp)
-target_link_libraries(hyperdb_index_tests PRIVATE hyperdb_core)
-add_test(NAME hyperdb_index_tests COMMAND hyperdb_index_tests)
-
-add_executable(hyperdb_vector_tests tests/unit/vector_tests.cpp)
-target_link_libraries(hyperdb_vector_tests PRIVATE hyperdb_core)
-add_test(NAME hyperdb_vector_tests COMMAND hyperdb_vector_tests)
-
-add_executable(hyperdb_persistence_tests tests/integration/persistence_tests.cpp)
-target_link_libraries(hyperdb_persistence_tests PRIVATE hyperdb_snapshot_compat)
-add_test(NAME hyperdb_persistence_tests COMMAND hyperdb_persistence_tests)
-
-add_executable(hyperdb_statement_tests tests/integration/statement_tests.cpp)
-target_link_libraries(hyperdb_statement_tests PRIVATE hyperdb_snapshot_compat)
-add_test(NAME hyperdb_statement_tests COMMAND hyperdb_statement_tests)
-
-find_package(Python3 COMPONENTS Interpreter QUIET)
-if(Python3_Interpreter_FOUND)
-    add_test(NAME hyperdb_bridge_tests
-        COMMAND ${CMAKE_COMMAND} -E env HYPERDB_BRIDGE_BIN=$<TARGET_FILE:hyperdb_bridge>
-                ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/integration/bridge_tests.py)
-endif()
-
-if(UNIX AND Python3_Interpreter_FOUND)
-    add_test(NAME hyperdb_cli_concurrency_tests
-        COMMAND ${CMAKE_COMMAND} -E env HYPERDB_CLI_BIN=$<TARGET_FILE:hyperdb>
-                ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/regression/cli_concurrency_tests.py)
-    add_test(NAME hyperdb_sqlite_conformance_tests
-        COMMAND ${CMAKE_COMMAND} -E env HYPERDB_CLI_BIN=$<TARGET_FILE:hyperdb>
-                ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/regression/sqlite_conformance.py)
-endif()
-
-set_tests_properties(
-    hyperdb_status_tests hyperdb_memory_resource_tests hyperdb_allocator_backend_tests
-    hyperdb_tests
-    hyperdb_lexer_tests hyperdb_parser_tests
-    hyperdb_index_tests hyperdb_vector_tests
-    PROPERTIES LABELS "unit")
-set_tests_properties(
-    hyperdb_file_system_tests hyperdb_page_format_tests hyperdb_disk_manager_tests
-    hyperdb_device_storage_tests hyperdb_buffer_pool_tests
-    PROPERTIES LABELS "storage")
-set_tests_properties(
-    hyperdb_c_api_tests hyperdb_persistence_tests hyperdb_statement_tests
-    PROPERTIES LABELS "integration")
-if(TEST hyperdb_bridge_tests)
-    set_tests_properties(hyperdb_bridge_tests PROPERTIES LABELS "integration")
-endif()
-if(TEST hyperdb_cli_concurrency_tests)
-    set_tests_properties(hyperdb_cli_concurrency_tests PROPERTIES LABELS "regression;concurrency")
-endif()
-if(TEST hyperdb_sqlite_conformance_tests)
-    set_tests_properties(hyperdb_sqlite_conformance_tests PROPERTIES LABELS "regression")
 endif()

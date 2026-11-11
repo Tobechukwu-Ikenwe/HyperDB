@@ -34,7 +34,7 @@ jobs:
             ctest --test-dir build/release --output-on-failure -L 'storage|concurrency'
           done
       - name: Exercise larger equality workload
-        run: /usr/bin/time -v ./build/release/hyperdb_benchmark 250000 10 > nightly-large-workload.txt 2> nightly-large-workload-resource.txt
+        run: /usr/bin/time -v ./build/release/hyperdb_benchmark --benchmark_min_time=0.1s --benchmark_repetitions=3 --benchmark_filter='BM_Equality.*250000' --benchmark_out=nightly-large-workload.json --benchmark_out_format=json > nightly-large-workload.txt 2> nightly-large-workload-resource.txt
       - name: Report tests not yet supported
         run: |
           {
@@ -47,7 +47,7 @@ jobs:
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: hyperdb-nightly-${{ github.sha }}
-          path: nightly-*-*.txt
+          path: nightly-*
           if-no-files-found: error
           retention-days: 30
 

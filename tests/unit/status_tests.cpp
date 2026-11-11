@@ -1,35 +1,33 @@
 #include "hyperdb/logging.h"
 #include "hyperdb/status.h"
+#include <gtest/gtest.h>
 
-#ifdef NDEBUG
-#undef NDEBUG
-#endif
 #include <cassert>
 #include <string>
 
 namespace {
 int calls = 0;
 void count_log(hyperdb::LogLevel level, std::string_view message) noexcept {
-    assert(level == hyperdb::LogLevel::info);
-    assert(message == "ready");
+    EXPECT_TRUE(level == hyperdb::LogLevel::info);
+    EXPECT_TRUE(message == "ready");
     ++calls;
 }
 } // namespace
 
-int main() {
+TEST(StatusTests, ExistingCases) {
     using namespace hyperdb;
     Status success;
-    assert(success.ok());
-    assert(success.code() == ErrorCode::ok);
+    EXPECT_TRUE(success.ok());
+    EXPECT_TRUE(success.code() == ErrorCode::ok);
     Result<int> number{42};
-    assert(number.ok() && number.value() == 42);
+    EXPECT_TRUE(number.ok() && number.value() == 42);
     Result<int> failure{Status{ErrorCode::io_error, "disk full"}};
-    assert(!failure.ok());
-    assert(failure.status().code() == ErrorCode::io_error);
-    assert(failure.status().message() == "disk full");
+    EXPECT_TRUE(!failure.ok());
+    EXPECT_TRUE(failure.status().code() == ErrorCode::io_error);
+    EXPECT_TRUE(failure.status().message() == "disk full");
     set_log_sink(count_log);
     log(LogLevel::info, "ready");
     set_log_sink(nullptr);
     log(LogLevel::info, "ready");
-    assert(calls == 1);
+    EXPECT_TRUE(calls == 1);
 }

@@ -1,8 +1,6 @@
 #include "storage/disk_manager.h"
+#include <gtest/gtest.h>
 
-#ifdef NDEBUG
-#undef NDEBUG
-#endif
 #include <algorithm>
 #include <cassert>
 #include <memory>
@@ -55,29 +53,29 @@ class MemoryFile final : public hyperdb::File {
 };
 } // namespace
 
-int main() {
+TEST(DeviceStorageTests, ExistingCases) {
     using namespace hyperdb;
     auto backing = std::make_shared<std::vector<std::byte>>();
     auto opened = DiskManager::open(std::make_unique<MemoryFile>(backing), true);
-    assert(opened.ok());
+    EXPECT_TRUE(opened.ok());
     auto manager = std::move(opened).value();
     const auto allocated = manager->allocate_slotted_page();
-    assert(allocated.ok() && allocated.value() == 1);
+    EXPECT_TRUE(allocated.ok() && allocated.value() == 1);
     auto page = manager->read_page(1);
-    assert(page.ok());
+    EXPECT_TRUE(page.ok());
     const std::array<std::byte, 3> record{std::byte{0x10}, std::byte{0x20}, std::byte{0x30}};
-    assert(insert_record(page.value(), record, 1).ok());
-    assert(manager->write_page(1, page.value()).ok());
+    EXPECT_TRUE(insert_record(page.value(), record, 1).ok());
+    EXPECT_TRUE(manager->write_page(1, page.value()).ok());
     manager.reset();
 
     opened = DiskManager::open(std::make_unique<MemoryFile>(backing), false);
-    assert(opened.ok());
+    EXPECT_TRUE(opened.ok());
     manager = std::move(opened).value();
-    assert(manager->page_count() == 2);
+    EXPECT_TRUE(manager->page_count() == 2);
     const auto restored = manager->read_page(1);
-    assert(restored.ok());
+    EXPECT_TRUE(restored.ok());
     const auto decoded = read_record(restored.value(), 0);
-    assert(decoded.ok() && decoded.value().size() == record.size());
-    assert(std::equal(decoded.value().begin(), decoded.value().end(), record.begin()));
-    assert(!DiskManager::open(std::unique_ptr<File>{}, false).ok());
+    EXPECT_TRUE(decoded.ok() && decoded.value().size() == record.size());
+    EXPECT_TRUE(std::equal(decoded.value().begin(), decoded.value().end(), record.begin()));
+    EXPECT_TRUE(!DiskManager::open(std::unique_ptr<File>{}, false).ok());
 }
